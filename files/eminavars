@@ -1,0 +1,338 @@
+#!/bin/bash
+# All Functions
+function echoterd (){
+    [[ $# == 0 ]] && return 1
+    declare -i TERM_COLS="$(tput cols)"
+    declare -i str_len="${#1}"
+    [[ $str_len -ge $TERM_COLS ]] && {
+        echo -e "$1";
+        return 0;
+    }
+    declare -i filler_len="$(( (TERM_COLS - str_len) / 2 ))"
+    [[ $# -ge 2 ]] && ch="${2:0:1}" || ch=" "
+    filler=""
+    for (( i = 0; i < filler_len; i++ )); do
+        filler="${filler}${ch}"
+    done
+    printf "%s%s%s" "$filler" "$1" "$filler"
+    [[ $(( (TERM_COLS - str_len) % 2 )) -ne 0 ]] && printf "%s" "${ch}"
+    return 0
+}
+
+function TimeTranslate {
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+  [[ $D > 0 ]] && printf '%d D ' $D
+  [[ $H > 0 ]] && printf '%d Hrs ' $H
+  [[ $M > 0 ]] && printf '%d Mins ' $M
+  [[ $D > 0 || $H > 0 || $M > 0 ]] && printf 'and '
+  printf '%d Secs\n' $S
+}
+
+MainMenuMessage(){
+clear
+figlet -w $(tput cols) -c Emina-Cli | lolcat -S 10
+echoterd "Version: v0.1 Beta" 2>/dev/null
+echo
+}
+
+function UnitConversion(){
+	B=$1
+	KB=$(bc -l <<< "scale=2; $B/1024")
+	MB=$(bc -l <<< "scale=2; $B/1024/1024")
+	GB=$(bc -l <<< "scale=2; $B/1024/1024/1024")
+	TB=$(bc -l <<< "scale=2; $GB/1024")
+	[[ $(echo "$TB" | awk -F [.] '{print $1}') > 0 ]] && echo "$TB TB" && return
+	[[ $(echo "$GB" | awk -F [.] '{print $1}') > 0 ]] && echo "$GB GB" && return
+	[[ $(echo "$MB" | awk -F[.] '{print $1}') > 0 ]] && echo "$MB MB" && return
+	[[ $(echo "$KB" | awk -F[.] '{print $1}') > 0 ]] && echo "$KB KB" && return
+	[[ $(echo "$B" | awk -F[.] '{print $1}') > 0 ]] && echo "$B B"
+}
+
+ErrorCatchFunc(){
+	tput setaf 1208; printf "[ERROR CATCHER] "; tput sgr0; printf "$1"; printf "\n"
+}
+
+RedCol() {
+    printf '\033[1;31;31m%b\033[0m' "$1"
+}
+
+AdditionalInfoFunc(){
+	tput setaf 2222; printf "[ADDITIONAL INFO] "; tput sgr0; printf "$1"; printf "\n"
+}
+
+InputSign(){
+	tput setaf 111; printf "[+] "; tput sgr0; printf "$1"; printf "\n"
+}
+
+InputSignNoBreak(){
+	tput setaf 111; printf "[+] "; tput sgr0; printf "$1"
+}
+
+GreenCol() {
+    printf '\033[1;31;32m%b\033[0m' "$1"
+}
+
+YellowCol() {
+    printf '\033[1;31;33m%b\033[0m' "$1"
+}
+
+InfoFunc() {
+    GreenCol "[INFO] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+
+InfoFuncDown() {
+    GreenCol "[INFO] "
+    printf -- "%s" "$1"
+}
+
+WarningFunc() {
+    YellowCol "[WARN] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+
+ErrorFunc() {
+    RedCol "[ERROR] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+
+# Traps When the download Interrupted
+trapDel(){
+	trap ctrl_c INT
+}
+
+£(){ echo "$1"; }
+€(){ xxd -p -r; }
+
+ctrl_c(){
+	rm $FILEVIDNAME
+	rm $FILEVIDNAME.aria2
+	WarningFunc "Downloads Interrupted, File not downloaded"
+	exit 1
+}
+
+trapDel1(){
+	trap ctrl_c1 INT
+}
+
+ctrl_c1(){
+	rm $FILEVIDNAME
+	rm $FILEVIDNAME.st
+	WarningFunc "Downloads Interrupted, File not downloaded!!"
+	exit 1
+}
+
+function printTable(){
+    local -r delimiter="${1}"
+    local -r data="$(removeEmptyLines "${2}")"
+    if [[ "${delimiter}" != '' && "$(isEmptyString "${data}")" = 'false' ]]
+    then
+        local -r numberOfLines="$(wc -l <<< "${data}")"
+        if [[ "${numberOfLines}" -gt '0' ]]
+        then
+            local table=''
+            local i=1
+            for ((i = 1; i <= "${numberOfLines}"; i = i + 1))
+            do
+                local line=''
+                line="$(sed "${i}q;d" <<< "${data}")"
+                local numberOfColumns='0'
+                numberOfColumns="$(awk -F "${delimiter}" '{print NF}' <<< "${line}")"
+                # Add Line Delimiter
+                if [[ "${i}" -eq '1' ]]
+                then
+                    table="${table}$(printf '%s#+' "$(repeatString '#+' "${numberOfColumns}")")"
+                fi
+                # Add Header Or Body
+                table="${table}\n"
+                local j=1
+                for ((j = 1; j <= "${numberOfColumns}"; j = j + 1))
+                do
+                    table="${table}$(printf '#| %s' "$(cut -d "${delimiter}" -f "${j}" <<< "${line}")")"
+                done
+                table="${table}#|\n"
+                # Add Line Delimiter
+                if [[ "${i}" -eq '1' ]] || [[ "${numberOfLines}" -gt '1' && "${i}" -eq "${numberOfLines}" ]]
+                then
+                    table="${table}$(printf '%s#+' "$(repeatString '#+' "${numberOfColumns}")")"
+                fi
+            done
+            if [[ "$(isEmptyString "${table}")" = 'false' ]]
+            then
+                echo -e "${table}" | column -s '#' -t | awk '/^\+/{gsub(" ", "-", $0)}1'
+            fi
+        fi
+    fi
+}
+
+function removeEmptyLines(){
+    local -r content="${1}"
+    echo -e "${content}" | sed '/^\s*$/d'
+}
+
+function repeatString(){
+    local -r string="${1}"
+    local -r numberToRepeat="${2}"
+    if [[ "${string}" != '' && "${numberToRepeat}" =~ ^[1-9][0-9]*$ ]]
+    then
+        local -r result="$(printf "%${numberToRepeat}s")"
+        echo -e "${result// /${string}}"
+    fi
+}
+
+function isEmptyString(){
+    local -r string="${1}"
+    if [[ "$(trimString "${string}")" = '' ]]
+    then
+        echo 'true' && return 0
+    fi
+    echo 'false' && return 1
+}
+
+function trimString(){
+    local -r string="${1}"
+    sed 's,^[[:blank:]]*,,' <<< "${string}" | sed 's,[[:blank:]]*$,,'
+}
+
+
+# Credits: https://github.com/pollev/bash_progress_bar
+# Thanks to Pollev
+
+CODE_SAVE_CURSOR="\033[s"
+CODE_RESTORE_CURSOR="\033[u"
+CODE_CURSOR_IN_SCROLL_AREA="\033[1A"
+COLOR_FG="\e[30m"
+COLOR_BG="\e[42m"
+COLOR_BG_BLOCKED="\e[43m"
+RESTORE_FG="\e[39m"
+RESTORE_BG="\e[49m"
+PROGRESS_BLOCKED="false"
+TRAPPING_ENABLED="false"
+TRAP_SET="false"
+CURRENT_NR_LINES=0
+
+setup_scroll_area() {
+    if [ "$TRAPPING_ENABLED" = "true" ]; then
+        trap_on_interrupt
+    fi
+    lines=$(tput lines)
+    CURRENT_NR_LINES=$lines
+    let lines=$lines-1
+    echo -en "\n"
+    echo -en "$CODE_SAVE_CURSOR"
+    echo -en "\033[0;${lines}r"
+    echo -en "$CODE_RESTORE_CURSOR"
+    echo -en "$CODE_CURSOR_IN_SCROLL_AREA"
+    draw_progress_bar 0
+}
+
+destroy_scroll_area() {
+    lines=$(tput lines)
+    echo -en "$CODE_SAVE_CURSOR"
+    echo -en "\033[0;${lines}r"
+    echo -en "$CODE_RESTORE_CURSOR"
+    echo -en "$CODE_CURSOR_IN_SCROLL_AREA"
+    clear_progress_bar
+    echo -en "\n\n"
+    if [ "$TRAP_SET" = "true" ]; then
+        trap - INT
+    fi
+}
+
+draw_progress_bar() {
+    percentage=$1
+    lines=$(tput lines)
+    let lines=$lines
+    if [ "$lines" -ne "$CURRENT_NR_LINES" ]; then
+        setup_scroll_area
+    fi
+    echo -en "$CODE_SAVE_CURSOR"
+    echo -en "\033[${lines};0f"
+    tput el
+    PROGRESS_BLOCKED="false"
+    print_bar_text $percentage
+    echo -en "$CODE_RESTORE_CURSOR"
+}
+
+block_progress_bar() {
+    percentage=$1
+    lines=$(tput lines)
+    let lines=$lines
+    # Save cursor
+    echo -en "$CODE_SAVE_CURSOR"
+    echo -en "\033[${lines};0f"
+    tput el
+    PROGRESS_BLOCKED="true"
+    print_bar_text $percentage
+    echo -en "$CODE_RESTORE_CURSOR"
+}
+
+clear_progress_bar() {
+    lines=$(tput lines)
+    let lines=$lines
+    # Save cursor
+    echo -en "$CODE_SAVE_CURSOR"
+    echo -en "\033[${lines};0f"
+    tput el
+    echo -en "$CODE_RESTORE_CURSOR"
+}
+
+print_bar_text() {
+    local percentage=$1
+    local cols=$(tput cols)
+    let bar_size=$cols-17
+    local color="${COLOR_FG}${COLOR_BG}"
+    if [ "$PROGRESS_BLOCKED" = "true" ]; then
+        color="${COLOR_FG}${COLOR_BG_BLOCKED}"
+    fi
+    let complete_size=($bar_size*$percentage)/100
+    let remainder_size=$bar_size-$complete_size
+    progress_bar=$(echo -ne "["; echo -en "${color}"; printf_new "#" $complete_size; echo -en "${RESTORE_FG}${RESTORE_BG}"; printf_new "." $remainder_size; echo -ne "]");
+    echo -ne " Progress ${percentage}% ${progress_bar}"
+}
+
+enable_trapping() {
+    TRAPPING_ENABLED="true"
+}
+
+trap_on_interrupt() {
+    TRAP_SET="true"
+    trap cleanup_on_interrupt INT
+}
+
+cleanup_on_interrupt() {
+    destroy_scroll_area
+    exit
+}
+
+printf_new() {
+    str=$1
+    num=$2
+    v=$(printf "%-${num}s" "$str")
+    echo -ne "${v// /$str}"
+}
+
+function ProgressBarModified(){
+    let _progress=(${1}*100/${2}*100)/100
+    let _done=(${_progress}*4)/10
+    let _left=40-$_done
+    _fill=$(printf "%${_done}s")
+    _empty=$(printf "%${_left}s")
+printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Scraping in Progress : [${_fill// /▇}${_empty// / }] ${_progress}%%"
+}
+
+function ProgressBarModifiedUnin(){
+    let _progress=(${1}*100/${2}*100)/100
+    let _done=(${_progress}*4)/10
+    let _left=40-$_done
+    _fill=$(printf "%${_done}s")
+    _empty=$(printf "%${_left}s")
+printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Uninstalling : [${_fill// /▇}${_empty// / }] ${_progress}%%"
+}
