@@ -594,7 +594,7 @@ function Server2(){
 		sed $'s/[^[:print:]\t]//g' 
 	)
 	ConGrep=$(
-		curl -e "$RootUrl" -LksI "$MainDirectLUni" | \
+		curl -e "$RootUrl" -LskI "$MainDirectLUni" | \
 		grep -i Content-Length | \
 		awk '{print $2}' | \
 		tr -dc '[:print:]'
