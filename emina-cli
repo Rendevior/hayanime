@@ -684,7 +684,7 @@ function Server3(){
 			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
-			DownloaderOwn1 "$MainDirectL" "$FILEVIDNAME"
+			DownloaderOwn1 "$MainDownL" "$FILEVIDNAME"
 		fi
 	else
 		ErrorFunc "Invalid Utility Number..."
@@ -922,7 +922,7 @@ function SearchArgsInf(){
 }
 
 #######################################
-#                                 Args Parsers                                  #
+#            Args Parsers             #
 #######################################
 
 function ParseArgs(){
@@ -987,7 +987,7 @@ function ErrorHelp(){
 }
 
 #######################################
-#                               Main Functions                                #
+#           Main Functions            #
 #######################################
 
 function MainFunction(){
