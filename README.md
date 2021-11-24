@@ -28,7 +28,7 @@ emina-cli
 
 | Inputs | Posible Values |
 | ------------- | ---------- |
-| Episode | (Number Only 1-1000), movie |
+| Episode | (Number Only 1-1000), Special Episodes (Ex. 6.5), movie |
 | Quality | high, low, High, Low |
 </div>
 
