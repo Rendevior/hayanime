@@ -239,8 +239,7 @@ function DownloadUtilityForRange(){
 				uniq
 			)
 			DetectNotFound=$(
-				wget -qO- "$BASE_URL/videos/$EPS" | \
-				xargs
+				wget -qO- "$BASE_URL/videos/$EPS"
 			)
 			if [[ "$DetectNotFound" == "404" ]]; then
 				ErrorFunc "Episode Not Found, Episode $EpiCheck"
