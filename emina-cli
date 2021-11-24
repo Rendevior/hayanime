@@ -207,6 +207,10 @@ function EpisodeSelector(){
 	elif [[ $EpisodeSelected = "" ]]; then
 		ErrorFunc "You Entered Nothing"
 		EpisodeSelector
+	elif [[ $EpisodeSelected =~ .*[.].* ]]; then
+		EpisodeSelected=$(
+			echo "$EpisodeSelected" | tr '.' '-'
+		)
 	fi
 }
 
