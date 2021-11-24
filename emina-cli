@@ -70,6 +70,9 @@ function InstallPrerequisites(){
     if ! [ -x "$(command -v lolcat)" ]; then
         gem install lolcat
     fi
+    if ! [ -x "$(command -v tput)" ]; then
+        apt-get install libncurses5-dbg -y
+    fi
     if ! [ -x "$(command -v pup)" ]; then
 		go get github.com/ericchiang/pup
 		export GOROOT=/usr/bin/go
@@ -129,27 +132,53 @@ function SearchForAnime(){
 }
 
 function SeriesSelector(){
-	{
-		wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
-		wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
-	} | \
-	pup 'div.name' | \
-	sed '/^<div.*/d' | \
-	sed '/^<\/.*>/d' | \
-	sed 's/^ //g' | \
-	sed 's| Episode.*[0-9]*||g' | \
-	uniq | \
-	while read -r wiffles; do
-		if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
-			echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
-		else 
-			echo ${wiffles}
-		fi
-	done | \
-	cat -n | \
-	sed 's/\t/+ /g' | \
-	sed 's/^ *//g' | \
-	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+	if [[ $DUBMODE == "1" ]]; then
+		{
+			wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
+			wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
+		} | \
+		pup 'div.name' | \
+		sed '/^<div.*/d' | \
+		sed '/^<\/.*>/d' | \
+		sed 's/^ //g' | \
+		sed 's| Episode.*[0-9]*||g' | \
+		awk '/[d|D]ub/' | \
+		uniq | \
+		while read -r wiffles; do
+			if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
+				echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
+			else 
+				echo ${wiffles}
+			fi
+		done | \
+		cat -n | \
+		sed 's/\t/+ /g' | \
+		sed 's/^ *//g' | \
+		printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+	else
+		{
+			wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
+			wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
+		} | \
+		pup 'div.name' | \
+		sed '/^<div.*/d' | \
+		sed '/^<\/.*>/d' | \
+		sed 's/^ //g' | \
+		sed 's| Episode.*[0-9]*||g' | \
+		sed '/[d|D]ub/d' | \
+		uniq | \
+		while read -r wiffles; do
+			if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
+				echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
+			else 
+				echo ${wiffles}
+			fi
+		done | \
+		cat -n | \
+		sed 's/\t/+ /g' | \
+		sed 's/^ *//g' | \
+		printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+	fi
 	read -p "$(InputSign 'Pick a Number: ')" SeriesSelected
 	if [[ $SeriesSelected =~ $NOPUNCTUATIONS ]]; then
 		ErrorFunc "Anime Name Mustn't have Punctuations Marks"
@@ -161,17 +190,33 @@ function SeriesSelector(){
         ErrorFunc 'Number Only Allowed'
         SeriesSelector
     fi
-	SeriesLinkPicked=$(
-		{
-		wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
-		wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
-		} | \
-		pup 'li.video-block' | \
-		grep -o "/videos/[^'\"<>]*" | \
-		sed -n "$SeriesSelected"p | \
-		sed "s|/videos|$BASE_URL/videos|g" | \
-		sed 's|-episode-[0-9].*||g'
-	)
+    if [[ $DUBMODE == "1" ]]; then
+		SeriesLinkPicked=$(
+			{
+				wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
+				wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
+			} | \
+			pup 'li.video-block' | \
+			grep -o "/videos/[^'\"<>]*" | \
+			awk '/[d|D]ub/' | \
+			sed -n "$SeriesSelected"p | \
+			sed "s|/videos|$BASE_URL/videos|g" | \
+			sed 's|-episode-[0-9].*||g'
+		)
+	else
+		SeriesLinkPicked=$(
+			{
+				wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch"
+				wget -qO- "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
+			} | \
+			pup 'li.video-block' | \
+			grep -o "/videos/[^'\"<>]*" | \
+			sed '/[d|D]ub/d' | \
+			sed -n "$SeriesSelected"p | \
+			sed "s|/videos|$BASE_URL/videos|g" | \
+			sed 's|-episode-[0-9].*||g'
+		)
+	fi
 	SerNameFile=$(
 		echo "$SeriesLinkPicked" | \
 		awk -F[/] '{print $5}'
@@ -296,14 +341,14 @@ function DownloadUtilityForRange(){
 			if [[ "$utility" =~ $HHSS ]]; then
 				if [ "$utility" == "1" ]; then
 					trapDel
-					aria2c -x 16 -s 16 --console-log-level=error --referer=$BASE_URL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o $FILEVIDNAME
+					aria2c -x 16 -s 16 --console-log-level=error --referer=$BASE_URL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
 					echo
 					TimeElapse=$(date +%s)
 					InfoFunc "Downloading Episode $i Done!!"
 					AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
 				elif [ "$utility" == "2" ]; then
 					trapDel1
-					DownloaderOwn "$MainDirectL"
+					DownloaderOwn "$MainDirectL" "$FILEVIDNAME"
 				fi
 			else
 				ErrorFunc "Invalid Utility Number..."
@@ -338,7 +383,7 @@ function DownloadUtilityForRange(){
 function CheckersIfAvailable(){
 	DetectNotFound=$(
 		wget -qO- "$BASE_URL/videos/$EPS" | \
-		xargs
+		xargs 2>/dev/null
 	)
 	if [[ "$DetectNotFound" == "404" ]]; then
 		ErrorFunc "Episode Not Found"
@@ -994,6 +1039,10 @@ function ParseArgsNon(){
 				echo "v0.1 Beta (Currently on Beta Test, Unstable Version)"
 				exit 0
 				;;
+			-dm|--dub)
+				DUBMODE="1"
+				break
+				;;
 			*)
 				ErrorFunc "[ $1: is not valid args ]"
 				ErrorHelp | column -ts $'\t' | sed 's|                               ||g'
@@ -1008,6 +1057,7 @@ function ErrorHelp(){
 	echo -e 'Usage: emina-cli [-dvhs]'
 	echo -e "   -d\t: Uninstall Script with its Config Files"
 	echo -e "   -v\t: Show the version of the script"
+	echo -e "   -dm\t: Switch to Dub Mode (Dubbed Anime Only)"
 	echo -e '   -s "<search query>"\t: Search Anime with info'
 	echo -e "   -h\t: Show this help"
 	printf '\n      You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && printf '/etc/emina/down.conf' && tput sgr 0 && printf "\n"
@@ -1027,8 +1077,8 @@ function MainFunction(){
 }
 
 if [[ $* == *"-s"* ]]; then
-ParseArgs "$@"
+	ParseArgs "$@"
 else
-ParseArgsNon "$@"
+	ParseArgsNon "$@"
 fi
 MainFunction
