@@ -51,6 +51,7 @@ Usage: emina-cli -s "Kaguya Sama"
 Usage: emina-cli [-dvhs]
    -d                            : Uninstall Script with its Config Files
    -v                            : Show the version of the script
+   -dm                           : Switch to Dub Mode (Dubbed Anime Only)
    -s "<search query>"           : Search Anime with info
    -h                            : Show this help
       You can change Servers or Download Method by changing the value of the "server or utility" variable in /etc/emina/down.conf
