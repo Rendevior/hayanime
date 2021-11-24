@@ -180,7 +180,7 @@ function SeriesSelector(){
 
 function EpisodeSelector(){
 	SpecialEpiCheck1=$(
-		echo "$SerNameFile-episode-1" | \
+		echo "$BASE_URL/videos/$SerNameFile-episode-1" | \
 		uniq
 	)
 	SpecialEpiCheck2=$(
