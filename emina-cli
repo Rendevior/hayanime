@@ -14,9 +14,9 @@
 #
 
 BASE_URL="https://gogoplay1.com"
-REGNUMBERONLY="^([M|m]ovie|[0-9][0-9]*|[0-9]*.[0-9])+$"
+REGNUMBERONLY="^([M|m]ovie|[0-9][0-9]*)+$"
 NOPUNCTUATIONS='['!'@#\$%^\&*()_+€£¥₩÷×~`¡¿<>%+{}]'
-RANGEREGNUMBONLY="^([M|m]ovie|[0-9]*-[0-9]*|[0-9]*)$"
+RANGEREGNUMBONLY="^([M|m]ovie|[0-9]*-[0-9]*|[0-9]*|[0-9]*.[0-9])$"
 
 if [ -f /etc/emina/down.conf ]; then
 	source /etc/emina/down.conf
