@@ -184,20 +184,16 @@ function EpisodeSelector(){
 		uniq
 	)
 	SpecialEpiCheck2=$(
-		wget -qO- "$BASE_URL/videos/$SpecialEpiCheck1" | \
-		xargs
-	)
-	SpecialEpiCheck3=$(
-		wget -qO- $SpecialEpiCheck2 | \
+		wget -qO- $SpecialEpiCheck1 | \
 		pup 'div.name' | \
 		sed '/^<div.*/d' | \
 		sed '/^<\/.*>/d' | \
 		grep -o '[0-9]*\.[0-9]' | \
 		xargs
 	)
-	if ! [[ -z "$SpecialEpiCheck3" ]]; then
+	if ! [[ -z "$SpecialEpiCheck2" ]]; then
 	InfoFunc "This Series Have Special Episodes"
-		for SpecialEpi in $SpecialEpiCheck3; do
+		for SpecialEpi in $SpecialEpiCheck2; do
 			echo "Episode: $SpecialEpi"
 		done
 	fi
