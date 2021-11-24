@@ -32,6 +32,9 @@ emina-cli
 | Quality | high, low, High, Low |
 </div>
 
+## Supported OS
++ Ubuntu 16 up
++ Debian 9 up
 ## Prerequisites 
 + *Bash (any version)*<br>
 + *Curl (any version)*<br>
