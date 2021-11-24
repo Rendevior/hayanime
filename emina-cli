@@ -201,16 +201,15 @@ function EpisodeSelector(){
 	if [[ ! $EpisodeSelected =~ $RANGEREGNUMBONLY ]]; then
 		ErrorFunc 'Number Only Allowed'
 		EpisodeSelector
-	elif [[ $EpisodeSelected -gt 1000 ]]; then
-		ErrorFunc "Out of range (1-1000) Episode only"
-		EpisodeSelector
-	elif [[ $EpisodeSelected = "" ]]; then
+	elif ! [[ $EpisodeSelected =~ .*[.].* ]]; then
+		if [[ $EpisodeSelected -gt 1000 ]]; then
+			ErrorFunc "Out of range (1-1000) Episode only"
+			EpisodeSelector
+		fi
+	fi
+	if [[ $EpisodeSelected = "" ]]; then
 		ErrorFunc "You Entered Nothing"
 		EpisodeSelector
-	elif [[ $EpisodeSelected =~ .*[.].* ]]; then
-		EpisodeSelected=$(
-			echo "$EpisodeSelected" | tr '.' '-'
-		)
 	fi
 }
 
@@ -320,6 +319,11 @@ function DownloadUtilityForRange(){
 			)
 			FILEVIDNAME="$SerNameFile-MOVIE.mp4"
 		else
+			if [[ $EpisodeSelected =~ .*[.].* ]]; then
+				EpisodeSelected=$(
+				echo "$EpisodeSelected" | tr '.' '-'
+				)
+			fi
 			EPS=$(
 				echo "$SerNameFile-episode-$EpisodeSelected" | \
 				uniq
@@ -334,7 +338,8 @@ function DownloadUtilityForRange(){
 
 function CheckersIfAvailable(){
 	DetectNotFound=$(
-		wget -qO- "$BASE_URL/videos/$EPS | xargs"
+		wget -qO- "$BASE_URL/videos/$EPS" | \
+		xargs
 	)
 	if [[ "$DetectNotFound" == "404" ]]; then
 		ErrorFunc "Episode Not Found"
