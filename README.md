@@ -1,4 +1,6 @@
-# <div align="center">Emina-Cli</div>
+<div align="center">
+<h1>Emina-Cli</h1>
+</div>
 <div align="center">Yet Another Simple but Powerful Anime Downloader</div>
 <br>
 <div align="center"><img src="https://user-images.githubusercontent.com/93582751/142875150-2a9e4c5e-80a7-41c2-8bc1-6c0cae329bf3.gif" width="275" height="225" /></div>
