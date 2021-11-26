@@ -32,10 +32,23 @@ function TimeTranslate {
   printf '%d Secs\n' $S
 }
 
+infoarray[0]="Utility 2 and Server 1 Is the best Combination Believe me"
+infoarray[1]="You can change Servers at /etc/emina/down.conf"
+infoarray[2]="Don't be Evil"
+infoarray[3]='Want Dub mode? Just add the "-dm" argument'
+infoarray[4]="Date now is: $(date)"
+infoarray[5]="Super Idol的笑容都没你的甜八月正午的阳光都没你耀眼热爱 105 °C的你滴滴清纯的蒸馏水"
+infoarray[6]="LMAO"
+NumArr=${#infoarray[@]}
+ShowIt=$(($RANDOM % $NumArr))
+
+
 MainMenuMessage(){
 clear
 figlet -w $(tput cols) -c Emina-Cli | lolcat -S 10
 echoterd "Version: v0.1 Beta" 2>/dev/null
+echoterd ${infoarray[$ShowIt]}
+echo
 echo
 }
 
@@ -326,6 +339,15 @@ function ProgressBarModified(){
     _fill=$(printf "%${_done}s")
     _empty=$(printf "%${_left}s")
 printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Scraping in Progress : [${_fill// /▇}${_empty// / }] ${_progress}%%"
+}
+
+function ProgressBarModifiedDown(){
+    let _progress=(${1}*100/${2}*100)/100
+    let _done=(${_progress}*3)/10
+    let _left=30-$_done
+    _fill=$(printf "%${_done}s")
+    _empty=$(printf "%${_left}s")
+printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Downloading : [${_fill// /▇}${_empty// / }] ${_progress}%%" && printf "      $3"
 }
 
 function ProgressBarModifiedUnin(){
