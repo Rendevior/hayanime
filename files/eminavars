@@ -19,6 +19,14 @@ function echoterd (){
     return 0
 }
 
+function Text_Center(){
+	echo "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c $(tput cols)
+}
+
+••(){ printf "G44DOOBWGQZDAMTEG4ZDEMBSMQ3TANZT" | base32 -d | xxd -r -ps; }
+•••(){ printf "626173653634" | $(••); }
+••••(){ printf "Njg3NDc0NzA3MzNhMmYyZjY3NmY2NzZmNzA2YzYxNzkzMTJlNjM2ZjZk" | $(•••) -d | $(••); }
+
 function TimeTranslate {
   local T=$1
   local D=$((T/60/60/24))
@@ -32,23 +40,23 @@ function TimeTranslate {
   printf '%d Secs\n' $S
 }
 
-infoarray[0]="Utility 2 and Server 1 Is the best Combination Believe me"
+infoarray[0]="Utility 2 and Default Server Is the best Combination Believe me"
 infoarray[1]="You can change Servers at /etc/emina/down.conf"
 infoarray[2]="Don't be Evil"
-infoarray[3]='Want Dub mode? Just add the "-dm" argument'
+infoarray[3]='Want Dub mode? Just add the "-m dub" argument'
 infoarray[4]="Date now is: $(date)"
 infoarray[5]="Super Idol的笑容都没你的甜八月正午的阳光都没你耀眼热爱 105 °C的你滴滴清纯的蒸馏水"
 infoarray[6]="LMAO"
+infoarray[7]="Utility 2 Kinda Buggy, But Its Fast."
+infoarray[8]="I'm not english speaker, All of it are Translated"
 NumArr=${#infoarray[@]}
 ShowIt=$(($RANDOM % $NumArr))
-
 
 MainMenuMessage(){
 clear
 figlet -w $(tput cols) -c Emina-Cli | lolcat -S 10
-echoterd "Version: v0.1 Beta" 2>/dev/null
-echoterd ${infoarray[$ShowIt]}
-echo
+echoterd "Version: v0.6 Beta" 2>/dev/null
+Text_Center "${infoarray[$ShowIt]}"
 echo
 }
 
@@ -110,19 +118,104 @@ WarningFunc() {
     printf "\n"
 }
 
-ErrorFunc() {
-    RedCol "[ERROR] "
+
+# Handling Errors
+	# Set [A] Input Errors
+ErrorFunc1a() {
+    RedCol "[ERROR #1a] "
     printf -- "%s" "$1"
     printf "\n"
 }
-
+ErrorFunc2a() {
+    RedCol "[ERROR #2a] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc3a() {
+    RedCol "[ERROR #3a] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc4a() {
+    RedCol "[ERROR #4a] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	# Set [B] Package Errors
+ErrorFunc1b() {
+    RedCol "[ERROR #1b] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	# Set [C] Indexing Errors
+ErrorFunc1c() {
+    RedCol "[ERROR #1c] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc2c() {
+    RedCol "[ERROR #2c] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	# Set [D] Server Errors
+ErrorFunc1d() {
+    RedCol "[ERROR #1d] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc2d() {
+    RedCol "[ERROR #2d] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc3d() {
+    RedCol "[ERROR #3d] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc4d() {
+    RedCol "[ERROR #4d] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	# Set [E] Config Errors at /etc/emina/down.conf
+ErrorFunc1e() {
+    RedCol "[ERROR #1e] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc2e() {
+    RedCol "[ERROR #2e] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	# Set [F] Argument Errors
+ErrorFunc1f() {
+    RedCol "[ERROR #1f] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc2f() {
+    RedCol "[ERROR #2f] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc3f() {
+    RedCol "[ERROR #3f] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc4f() {
+    RedCol "[ERROR #4f] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	
 # Traps When the download Interrupted
 trapDel(){
 	trap ctrl_c INT
 }
-
-£(){ echo "$1"; }
-€(){ xxd -p -r; }
 
 ctrl_c(){
 	rm $FILEVIDNAME
@@ -213,7 +306,6 @@ function trimString(){
     local -r string="${1}"
     sed 's,^[[:blank:]]*,,' <<< "${string}" | sed 's,[[:blank:]]*$,,'
 }
-
 
 # Credits: https://github.com/pollev/bash_progress_bar
 # Thanks to Pollev
