@@ -1,8 +1,8 @@
 <div align="center">
-<h1>Emina-Cli</h1>
+<h1>Emina-Cli <sup><sub><sup>v0.6 Beta</sup></sub></sup></h1>
 Yet Another Simple but Powerful Anime Downloader
 <br>
-<img src="https://user-images.githubusercontent.com/93582751/144230269-6d4aaceb-ca92-49f0-ae84-165c8800b3e8.gif" width="450" height="225" />
+<img src="https://user-images.githubusercontent.com/93582751/144230269-6d4aaceb-ca92-49f0-ae84-165c8800b3e8.gif" width="450" height="150" />
 </div>
 
 ## Installation
@@ -28,7 +28,7 @@ emina-cli
 
 | Inputs | Posible Values |
 | ------------- | ---------- |
-| Episode | (Number Only 1-1000), Special Episodes (Ex. 6.5), movie |
+| Episode | All Episodes Possible, Special Episodes (Ex. 6.5), movie |
 | Quality | high, low, High, Low |
 </div>
 
@@ -44,18 +44,32 @@ emina-cli
 + *Pup*
 + *Sed*
 + *Awk*
++ *Ruby*
++ *GoLang*
 + *Recode*
 ## Option / Args
 ```
-Usage: emina-cli -s "Kaguya Sama"
-Usage: emina-cli [-dvhs]
-   -d                            : Uninstall Script with its Config Files
-   -v                            : Show the version of the script
-   -dm                           : Switch to Dub Mode (Dubbed Anime Only)
-   -s "<search query>"           : Search Anime with info
-   -h                            : Show this help
-      You can change Servers or Download Method by changing the value of the "server or utility" variable in /etc/emina/down.conf
-      Option "-d" is to Uninstall this Script with /etc/emina/down.conf & /etc/emina/eminavars But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..
+Usage: emina-cli -i "<search query>"
+Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]
+Usage: emina-cli [arguments...]
+
+Program that allows you to download anime in command line.
+
+Options:
+   -d                      : Uninstall Script with its Config Files
+   -v                      : Show the version of the script
+   -m dub                  : Switch to Dub Mode (Dubbed Anime Only)
+   -i "<search query>"     : Search Anime and Print Info
+   -s "<search query>"     : Search Anime
+   -e "<episode>"          : Number of Episode
+   -q "<quality>"          : Quality of Video
+   -p "<number>"           : Spicify Picks in Anime Selection
+   -t "<server>"           : Specify Server (default, 1, 2, 3, 4)
+   -h                      : Show this help
+
+You can change Servers or Download Method by changing the value of the "server or utility" variable in /etc/emina/down.conf
+Option "-d" is to Uninstall this Script with /etc/emina/down.conf & /etc/emina/eminavars But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..
+Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..
 ```
 ## Features
 + You can Change Servers and method of Downloading to make it Fast as possible
@@ -66,7 +80,7 @@ Usage: emina-cli [-dvhs]
 
 | Variable | Posible Values |
 | ------------- | ---------- |
-| Server | default, 1, 2, 3 |
+| Server | default, 1, 2, 3, 4 |
 | Download Method | 1, 2 |
 </div>
 
