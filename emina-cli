@@ -1379,10 +1379,10 @@ function ErrorHelp(){
 	echo -e "   -m dub#: Switch to Dub Mode (Dubbed Anime Only)"
 	echo -e '   -i "<search query>"#: Search Anime and Print Info'
 	echo -e '   -s "<search query>"#: Search Anime'
-	echo -e "   -e "<episode>"#: Number of Episode"
-	echo -e "   -q "<quality>"#: Quality of Video"
-	echo -e '   -p "<number>"#: Specify Picks in Anime Selection'
-	echo -e '   -t "<server>"#: Specify Server (default, 1, 2, 3, 4)'
+	echo -e "   -e "[episode]"#: Number of Episode"
+	echo -e "   -q "[quality]"#: Quality of Video"
+	echo -e '   -p "[number]"#: Specify Picks in Anime Selection'
+	echo -e '   -t "[server]"#: Specify Server (default, 1, 2, 3, 4)'
 	echo -e "   -h#: Show this help"
 	echo -e '͐'
 	printf 'You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && printf '/etc/emina/down.conf' && tput sgr 0
