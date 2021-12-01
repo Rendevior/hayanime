@@ -62,7 +62,7 @@ Options:
    -s "<search query>"     : Search Anime
    -e "<episode>"          : Number of Episode
    -q "<quality>"          : Quality of Video
-   -p "<number>"           : Spicify Picks in Anime Selection
+   -p "<number>"           : Specify Picks in Anime Selection
    -t "<server>"           : Specify Server (default, 1, 2, 3, 4)
    -h                      : Show this help
 
