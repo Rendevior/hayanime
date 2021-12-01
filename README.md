@@ -2,7 +2,7 @@
 <h1>Emina-Cli</h1>
 Yet Another Simple but Powerful Anime Downloader
 <br>
-<img src="https://user-images.githubusercontent.com/93582751/142875150-2a9e4c5e-80a7-41c2-8bc1-6c0cae329bf3.gif" width="275" height="225" />
+<img src="https://user-images.githubusercontent.com/93582751/144230269-6d4aaceb-ca92-49f0-ae84-165c8800b3e8.gif" width="450" height="225" />
 </div>
 
 ## Installation
