@@ -6,9 +6,8 @@ Yet Another Simple but Powerful Anime Downloader
 </div>
 
 ## Installation
-Make sure you have Root Permission
+Update and Upgrade All Packages Available
 ```
-~# sudo su -
 ~# sudo apt-get update -y
 ~# sudo apt-get upgrade -y
 ```
