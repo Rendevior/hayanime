@@ -15,6 +15,8 @@
 #  Authors Note: I'm Not Responsible if anything Happens in Your Machine, (Try at Your Own Risk)
 #  But bro trust me, Its a Good tool hidden in Github Algorithm
 #  Give a Star if you like this small Project
+#  Only Available In Ubuntu, Debian. if possible i will make it compatible in Other OS too 
+#  It's Kinda hard to test in other OS, i dont have other than Ubuntu Debian
 #
 
 # Variables and Regexes
@@ -105,7 +107,6 @@ else
 	done
 }
 
-
 # Collect All Needed Data to Download
 function OverAllInputs(){
 	MainMenuMessage
@@ -156,6 +157,7 @@ function OverAllInputs(){
 	elif ! [[ $EpisodeSelected =~ .*[.].* ]]; then
 		if [[ $EpisodeSelected -gt $LastEpiList ]]; then
 			ErrorFunc4a "Out of range ($LeastEpiList-$LastEpiList) Episode only"
+			sleep 2
 			unset EpisodeSelected
 			OverAllInputs
 		fi
@@ -1379,8 +1381,8 @@ function ErrorHelp(){
 	echo -e "   -m dub#: Switch to Dub Mode (Dubbed Anime Only)"
 	echo -e '   -i "<search query>"#: Search Anime and Print Info'
 	echo -e '   -s "<search query>"#: Search Anime'
-	echo -e "   -e "[episode]"#: Number of Episode"
-	echo -e "   -q "[quality]"#: Quality of Video"
+	echo -e '   -e "[episode]"#: Number of Episode'
+	echo -e '  -q "[quality]"#: Quality of Video'
 	echo -e '   -p "[number]"#: Specify Picks in Anime Selection'
 	echo -e '   -t "[server]"#: Specify Server (default, 1, 2, 3, 4)'
 	echo -e "   -h#: Show this help"
