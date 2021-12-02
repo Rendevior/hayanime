@@ -421,14 +421,17 @@ function DownloadUtilityForRange(){
 				ErrorFunc2c "The Episode is Not Released yet (Not Exist)"
 				$(basename $0)
 			fi
-			DirectDownLinksList=$(
-				wget -qO- "$LinkFor" | \
-				pup 'div[class="dowload"]' | \
-				grep -o "https[^'\"<>]*" | \
-				grep 'gogo-cdn' | \
-				tac | \
-				xargs
-			)
+			if [[ $server == "4" ]]; then
+				DirectDownLinksList=$MainDirectLS4
+			else
+				DirectDownLinksList=$(
+					wget -qO- "$LinkFor" | \
+					pup 'div[class="dowload"]' | \
+					grep -o "https[^'\"<>]*" | \
+					grep 'gogo-cdn' | \
+					tac | \
+					xargs
+				)
 # Looping to Check Every Link, If it fails proceed to other Quality
 			for LISTER in $DirectDownLinksList; do
 				ConGrep=$(
@@ -1217,7 +1220,7 @@ function ParseArgs(){
 			d)
 				if [[ $EUID -ne 0 ]]; then
 					ErrorFunc1e 'Give this script Sudo Permission'
-					InfoFunc 'Run: sudo $(basename $0) -d'
+					InfoFunc "Run: sudo $(basename $0) -d"
 					exit 1
 				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
