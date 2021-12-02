@@ -4,12 +4,11 @@ ALLF := /etc/emina
 all: install
 
 exist:
-	if ! [ -d $(ALLF) ]; then $(shell mkdir $(ALLF)); fi
+	if ! [ -d $(ALLF) ]; then mkdir -p $(ALLF); fi
 
-install:
+install: exist
 	cp emina-cli $(DESTDIR)$(PREFIX)/sbin/emina-cli
 	chmod 0777 $(DESTDIR)$(PREFIX)/sbin/emina-cli
-	exist
 	cp files/eminavars $(DESTDIR)$(ALLF)/eminavars
 	cp files/down.conf $(DESTDIR)$(ALLF)/down.conf
 	
