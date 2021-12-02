@@ -24,28 +24,29 @@ REGNUMBERONLY="^([M|m]ovie|[0-9][0-9]*)+$"
 NOPUNCTUATIONS='['!'@#\$%^\&*()_+€£¥₩÷×~`¡¿<>%+{}]'
 RANGEREGNUMBONLY="^([M|m]ovie|[0-9]*-[0-9]*|[0-9]*|[0-9]*.[0-9])$"
 HHSS="^[0-9]$|[D|d]efault"
+PermsInst="sudo"
 
 # Automated Install Packages and Checks
 function InstallPrerequisites(){
 	if [ -f /etc/emina/down.conf ]; then
 		source /etc/emina/down.conf
 	else
-		mkdir -p /etc/emina
-		wget -q -O /etc/emina/down.conf "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/down.conf"
+		${PermsInst} mkdir -p /etc/emina
+		${PermsInst} wget -q -O /etc/emina/down.conf "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/down.conf"
 		source /etc/emina/down.conf
 	fi
 	if [ -f /etc/emina/eminavars ]; then
 		source /etc/emina/eminavars
 else
-		wget -q -O /etc/emina/eminavars "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/eminavars"
+		${PermsInst} wget -q -O /etc/emina/eminavars "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/eminavars"
 		source /etc/emina/eminavars
 	fi
 	BASE_URL="$(••••)"
 	if ! [ -f /usr/local/sbin/$(basename $0) ]; then
 		FileDir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
-		cp $FileDir /usr/local/sbin/$(basename $0)
-		chmod 0777 /usr/local/sbin/$(basename $0)
-		rm $FileDir
+		${PermsInst} cp $FileDir /usr/local/sbin/$(basename $0)
+		${PermsInst} chmod 0777 /usr/local/sbin/$(basename $0)
+		${PermsInst} rm $FileDir
 		InfoFunc "The File was Moved!! You Can Execute it in any Directory"
 		InfoFunc "Run: $(basename $0)"
 		exit 1
@@ -56,46 +57,46 @@ else
 		UNIX_TIME=$(date +%s)
 		TIME_DIFF=$(( UNIX_TIME - LAST_UPDATED ))
 		if [[ "${TIME_DIFF}" -gt 2629746 ]]; then
-				sudo apt-get update -y
-				sudo apt-get upgrade -y
+				${PermsInst} apt-get update -y
+				${PermsInst} apt-get upgrade -y
 		fi
 	else
-		sudo apt-get update -y
-		sudo apt-get upgrade -y
+		${PermsInst} apt-get update -y
+		${PermsInst} apt-get upgrade -y
 	fi
 	for packages in figlet recode axel ruby; do
 		if ! [ -x "$(command -v $packages)" ]; then
-			yes | sudo apt install $packages
+			yes | ${PermsInst} apt install $packages
 			clear
 		fi
 	done
 # Install Go Lang if its not Installed (Its Required for PUP)
 	if ! [ -x "$(command -v go)" ]; then
-		yes | sudo apt install golang
+		yes | ${PermsInst} apt install golang
 	fi
 # Install Lolcat for Fancy Colored Text
     if ! [ -x "$(command -v lolcat)" ]; then
-        sudo gem install lolcat
+        ${PermsInst} gem install lolcat
     fi
 # For Colored Text
     if ! [ -x "$(command -v tput)" ]; then
-        yes | sudo apt-get install libncurses5-dbg
+        yes | ${PermsInst} apt-get install libncurses5-dbg
     fi
 # Install the most Compatible Downloading Utility in Bash
     if ! [ -x "$(command -v aria2c)" ]; then
-    	yes | sudo apt-get install aria2
+    	yes | ${PermsInst} apt-get install aria2
     fi
 # Thanks to Ericchiang, it makes my Job Easy and its Really Helpful
     if ! [ -x "$(command -v pup)" ]; then
-		go get github.com/ericchiang/pup
+		${PermsInst} go get github.com/ericchiang/pup
 		export GOROOT=/usr/bin/go
-		mv /root/go/bin/pup /usr/bin/pup
-		chmod +x /usr/bin/pup
+		${PermsInst} mv /root/go/bin/pup /usr/bin/pup
+		${PermsInst} chmod +x /usr/bin/pup
 	elif [ -z "$(pup --version)" ]; then
-		go get github.com/ericchiang/pup
+		${PermsInst} go get github.com/ericchiang/pup
 		export GOROOT=/usr/bin/go
-		mv /root/go/bin/pup /usr/bin/pup
-		chmod +x /usr/bin/pup
+		${PermsInst} mv /root/go/bin/pup /usr/bin/pup
+		${PermsInst} chmod +x /usr/bin/pup
 	fi
 # Revised Checks if theres error escapes from the conditions
 	for check in figlet tput lolcat aria2c recode axel pup ruby; do
@@ -1214,6 +1215,11 @@ function ParseArgs(){
 	while getopts ":dhvi:s:e:q:m:t:p:" opt; do
 		case "${opt}" in
 			d)
+				if [[ $EUID -ne 0 ]]; then
+					ErrorFunc1e 'Give this script Sudo Permission'
+					InfoFunc 'Run: sudo $(basename $0) -d'
+					exit 1
+				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				tput reset
 				FileDir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
