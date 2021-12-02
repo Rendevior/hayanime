@@ -1388,7 +1388,7 @@ function ErrorHelp(){
 	echo -e '   -i "<search query>"#: Search Anime and Print Info'
 	echo -e '   -s "<search query>"#: Search Anime'
 	echo -e '   -e "[episode]"#: Number of Episode'
-	echo -e '  -q "[quality]"#: Quality of Video'
+	echo -e '   -q "[quality]"#: Quality of Video'
 	echo -e '   -p "[number]"#: Specify Picks in Anime Selection'
 	echo -e '   -t "[server]"#: Specify Server (default, 1, 2, 3, 4)'
 	echo -e "   -h#: Show this help"
