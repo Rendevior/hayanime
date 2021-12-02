@@ -432,6 +432,7 @@ function DownloadUtilityForRange(){
 					tac | \
 					xargs
 				)
+			fi
 # Looping to Check Every Link, If it fails proceed to other Quality
 			for LISTER in $DirectDownLinksList; do
 				ConGrep=$(
