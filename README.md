@@ -13,9 +13,9 @@ Update and Upgrade All Packages Available
 ```
 Now Install it
 ```
-~# wget -O emina-cli "https://github.com/TheGlockMisc/emina-cli/raw/main/emina-cli"
-~# chmod +x emina-cli
-~# ./emina-cli
+~# git clone https://github.com/TheGlockMisc/emina-cli.git
+~# cd emina-cli
+~# sudo make
 ```
 ## Usage
 Its Simple..
