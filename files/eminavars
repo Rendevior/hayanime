@@ -211,6 +211,13 @@ ErrorFunc4f() {
     printf -- "%s" "$1"
     printf "\n"
 }
+	# Set [E] Permissions Error
+ErrorFunc1e() {
+    RedCol "[ERROR #1e] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+	
 	
 # Traps When the download Interrupted
 trapDel(){
