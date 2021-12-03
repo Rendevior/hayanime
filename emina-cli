@@ -422,6 +422,10 @@ function DownloadUtilityForRange(){
 				$(basename $0)
 			fi
 			if [[ $server == "4" ]]; then
+				MainDirectLS4=$(
+					echo "$MainDirectLS4" | \
+					recode html...utf8
+				)
 				DirectDownLinksList=$MainDirectLS4
 			else
 				DirectDownLinksList=$(
