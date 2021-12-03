@@ -423,6 +423,12 @@ function DownloadUtilityForRange(){
 			fi
 			if [[ $server == "4" ]]; then
 				MainDirectLS4=$(
+					wget -qO- "$LinkFor" | \
+					pup 'div[class="dowload"]' | \
+					grep -o "https[^'\"<>]*" | \
+					grep 'cloudfront'
+				)
+				MainDirectLS4=$(
 					echo "$MainDirectLS4" | \
 					recode html...utf8
 				)
