@@ -87,5 +87,10 @@ Option "-t" will specify which server will used to download the File, if this ar
 > Ex. [+] Episode: *1-7*<br>
 + Auto Install Prerequisites
 
++ ### Watch Mode
+```diff
+- Not yet implemented
+```
+
 ## Bugs & Issues
 + If You Found Some Bugs, Feel Free to Create a New Issue
