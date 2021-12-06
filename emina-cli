@@ -110,7 +110,7 @@ function PackageChecks(){
 		if [[ -z "$(which $check)" ]]; then
 			ErrorFunc1b "Package $check is not installed."
 			InfoFunc "Rerun this Script again"
-			exit 1
+			exit 2
 		fi
 	done
 }
@@ -424,7 +424,7 @@ function DownloadUtilityForRange(){
 			)
 			if [[ "$DetectNotFound" == *404* ]]; then
 				ErrorFunc2c "Episode Not Found, Episode $EpiCheck"
-				exit 1
+				exit 3
 			fi
 		done
 # For Looping Arithmetic of Episodes
@@ -504,7 +504,7 @@ function DownloadUtilityForRange(){
 				fi
 			else
 				ErrorFunc1e "Invalid Utility Number..."
-				exit 1
+				exit 5
 			fi
 		done
 	else
@@ -543,7 +543,7 @@ function CheckersIfAvailable(){
 	)
 	if [[ "$PageLoaderCheck" =~ ^(404)$ ]]; then
 		ErrorFunc2c "Episode Not Found"
-		exit 1
+		exit 3
 	fi
 	if ! [[ $WatchAnime == "1" ]]; then
 		LinkFor=$(
@@ -565,10 +565,10 @@ function CheckersIfAvailable(){
 	fi
 	if [[ "$LinkFor" == "" ]]; then
 		ErrorFunc1d "Returned 404 Not Found"
-		exit 1
+		exit 3
 	elif [[ "$(wget -qO- $LinkFor)" == *"Blocked"* ]]; then
 		ErrorFunc2d "Episode Unavailable"
-		exit 1
+		exit 3
 	fi
 }
 
@@ -631,7 +631,7 @@ function ServerGreppers(){
 		fi
 	else
 		ErrorFunc1e "Invalid Server Value..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -642,7 +642,7 @@ function ServerGreppers(){
 function DownloaderOwn(){
 	if [[ $(ls) =~ $2 ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	TimeStart=$(date +%s)
 	axel -n 28 --header="Referer: $BASE_URL" "$1" -o "$2" | \
@@ -673,7 +673,7 @@ function DownloaderOwn(){
 function DownloaderOwn1(){
 	if [[ $(ls) =~ $2 ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	TimeStart=$(date +%s)
 	axel -n 16 --header="Referer: $RootUrl" "$1" -o "$2" | \
@@ -706,7 +706,7 @@ function DownloaderOwn1(){
 function DownloaderOwn2(){
 	if [[ $(ls) =~ $2 ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	TimeStart=$(date +%s)
 	axel -n 2 --insecure --header="Referer: $RootUrl" "$1" -o "$2" | \
@@ -737,7 +737,7 @@ function DownloaderOwn2(){
 function DownloaderOwn3(){
 	if [[ $(ls) =~ $2 ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	TimeStart=$(date +%s)
 	axel -n 28 --header="Referer: $BASE_URL" "$1" -o "$2" | \
@@ -774,10 +774,10 @@ function DefaultQuality(){
 	MainDirectLink=$1
 	if [[ -z "$MainDirectLink" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	if [[ "$utility" =~ $HHSS ]]; then
 		if [ "$utility" == "1" ]; then
@@ -794,7 +794,7 @@ function DefaultQuality(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -803,10 +803,10 @@ function Server1(){
 	MainDownLink=$1
 	if [[ -z "$MainDownLink" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	RootURL="https://sbplay1.com"
 	for QulitySB in 1920 1280 640; do
@@ -847,7 +847,7 @@ function Server1(){
 	)
 	if [[ -z "$ConGrep" ]]; then
 		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright"
-		exit 1
+		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
 	if [[ "$utility" =~ $HHSS ]]; then
@@ -865,7 +865,7 @@ function Server1(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -874,10 +874,10 @@ function Server2(){
 	MainDownLink=$1
 	if [[ -z "$MainDownLink" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	RootUrl="https://www.mp4upload.com"
 	if [[ "$(echo "$MainDownLink" | awk -F[://] '{print $1}')" == "http" ]]; then
@@ -887,14 +887,17 @@ function Server2(){
 		)
 	fi
 # 1st Connection Bridge
+	Loader1STConn=$(
+		wget -qO- $MainDownLink
+	)
 	ID=$(
-		wget -qO- $MainDownLink | \
+		echo "$Loader1STConn" | \
 		pup 'input[type="hidden"]' | \
 		grep 'name="id"' | \
 		awk -F['"'] '{print $6}'
 	)
 	FNAME=$(
-		wget -qO- $MainDownLink | \
+		echo "$Loader1STConn" | \
 		pup 'input[type="hidden"]' | \
 		grep 'name="fname"' | \
 		awk -F['"'] '{print $6}'
@@ -925,7 +928,7 @@ function Server2(){
 	)
 	if [[ -z "$ConGrep" ]]; then
 		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright"
-		exit 1
+		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
 	if [[ "$utility" =~ $HHSS ]]; then
@@ -943,7 +946,7 @@ function Server2(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -952,10 +955,10 @@ function Server3(){
 	MainDownLink=$1
 	if [[ -z "$MainDownLink" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	GetAPIServ1=$(
 		wget -qO- "$MainDownLink" | \
@@ -1004,7 +1007,7 @@ function Server3(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -1017,10 +1020,10 @@ function Server4(){
 	)
 	if [[ -z "$DirectDownLinksList" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
 		ErrorFunc2b "You Already Downloaded the Episode"
-		exit 1
+		exit 2
 	fi
 	for LISTER in $DirectDownLinksList; do
 		ConGrep=$(
@@ -1055,7 +1058,7 @@ function Server4(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -1076,7 +1079,7 @@ function LowQuality(){
 	)
 	if [[ -z "$ConGrep" ]]; then
 		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright"
-		exit 1
+		exit 4
 	fi
 	if [[ "$utility" =~ $HHSS ]]; then
 		if [ "$utility" == "1" ]; then
@@ -1092,7 +1095,7 @@ function LowQuality(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -1100,7 +1103,7 @@ function Server1Low(){
 	MainDownLink=$1
 	if [[ -z "$MainDownLink" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	fi
 	RootURL="https://sbplay1.com"
 	VaLMain=$(
@@ -1136,7 +1139,7 @@ function Server1Low(){
 	)
 	if [[ -z "$ConGrep" ]]; then
 		ErrorFunc3d "Server Not Found"
-		exit 1
+		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
 	if [[ "$utility" =~ $HHSS ]]; then
@@ -1154,7 +1157,7 @@ function Server1Low(){
 		fi
 	else
 		ErrorFunc1e "Invalid Utility Number..."
-		exit 1
+		exit 5
 	fi
 }
 
@@ -1197,7 +1200,7 @@ function QualityPicker(){
 				fi
 			else
 				ErrorFunc1e "Invalid Server Value..."
-				exit 1
+				exit 5
 			fi
 		;;
 	low|Low)
@@ -1210,7 +1213,7 @@ function QualityPicker(){
 				Server1Low "$MainDirectLS1"
 			else
 				ErrorFunc2e "Low Quality only Available in Default Server and Server 1"
-				exit 1
+				exit 5
 			fi
 		fi
 	esac
@@ -1321,7 +1324,7 @@ function WatchGetData(){
 	)
 	if [[ -z $GetDATA ]]; then 
 		ErrorFunc3d "Failed to get data"
-		exit 1
+		exit 4
 	fi
 	GetSTREAM=$(
 		wget -qO- "$GetDATA" | \
@@ -1411,7 +1414,7 @@ function ParseArgs(){
 				if [[ $EUID -ne 0 ]]; then
 					ErrorFunc1e 'Give this script Sudo Permission to Delete files'
 					InfoFunc "Run: sudo $(basename $0) -d"
-					exit 1
+					exit 5
 				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				tput reset
@@ -1448,20 +1451,20 @@ function ParseArgs(){
 					*)
 						ErrorFunc1f "Value was not Valid"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 				esac
 				;;
 			i)
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc2f "Search Query Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					-s|-e|-q|-t|-p)
 						ErrorFunc3f "Search Query is Not Specified"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 						;;
 					*)
 						infarg=${OPTARG}
@@ -1474,13 +1477,13 @@ function ParseArgs(){
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc2f "Search Query Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					-i|-e|-q|-t|-p)
 						ErrorFunc3f "Search Query is Not Specified"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 						;;
 					*)
 						AnimeSearch=${OPTARG}
@@ -1491,13 +1494,13 @@ function ParseArgs(){
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc3f "Episode Number Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					-s|-i|-q|-t|-p)
 						ErrorFunc3f "Episode Number is Not Specified"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 						;;
 					*)
 						EpisodeSelected=${OPTARG}
@@ -1508,7 +1511,7 @@ function ParseArgs(){
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc3f "Quality Value Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					high|High|low|Low)
@@ -1517,7 +1520,7 @@ function ParseArgs(){
 					*)
 						ErrorFunc1f "${OPTARG} is a Invalid Quality"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 						;;
 				esac
 				;;
@@ -1525,7 +1528,7 @@ function ParseArgs(){
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc3f "Quality Value Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					default|1|2|3|4)
@@ -1534,7 +1537,7 @@ function ParseArgs(){
 					*)
 						ErrorFunc1f "${OPTARG} is a Invalid Server Number"
 						ErrorHelp | column -ts '#' | sed 's|                               ||g'
-						exit 1
+						exit 6
 						;;
 				esac
 				;;
@@ -1542,7 +1545,7 @@ function ParseArgs(){
 				if [[ ${OPTARG} == "" ]]; then
 					ErrorFunc3f "Quality Value Must not be empty"
 					ErrorHelp | column -ts '#' | sed 's|                               ||g'
-					exit 1
+					exit 6
 				fi
 				case $OPTARG in
 					[0-9]*)
@@ -1558,12 +1561,12 @@ function ParseArgs(){
 			\?)
 				ErrorFunc4f "[ ${OPTARG}: is not valid Argument ]"
 				ErrorHelp | column -ts '#' | sed 's|                               ||g'
-				exit 1
+				exit 6
 				;;
 			:)
-				ErrorFunc4f "[ ${OPTARG} Argument must have a Value ]"
+				ErrorFunc4f "[ -${OPTARG} Argument must have a Value ]"
 				ErrorHelp | column -ts '#' | sed 's|                               ||g'
-				exit 1
+				exit 6
 				;;
 		esac
 	done
