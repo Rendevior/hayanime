@@ -20,7 +20,7 @@ function echoterd (){
 }
 
 function Text_Center(){
-	echo "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c $(tput cols)
+	echo -e "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c $(tput cols)
 }
 
 ••(){ printf "G44DOOBWGQZDAMTEG4ZDEMBSMQ3TANZT" | base32 -d | xxd -r -ps; }
@@ -40,12 +40,32 @@ function TimeTranslate {
   printf '%d Secs\n' $S
 }
 
+function RandomRecommendation(){
+	RandGenre=$(
+		wget -qO- "https://www1.gogoanime.cm/" | \
+		pup 'li[class="movie genre hide"]' | \
+		grep -o "/genre[^'\"<>]*" | \
+		shuf | \
+		sed -n '1'p
+	)
+	RandPickAni=$(
+		wget -qO- "https://www1.gogoanime.cm$RandGenre" | \
+		pup 'p.name' | \
+		grep -o '".*"' | \
+		awk -F['"'] '{print $4}' | \
+		sed '/^$/d' | \
+		shuf | \
+		sed -n '1'p
+	)
+	echo "$RandPickAni"
+}
+
 infoarray[0]="Utility 2 and Default Server Is the best Combination Believe me"
 infoarray[1]="You can change Servers at /etc/emina/down.conf"
 infoarray[2]="Don't be Evil"
 infoarray[3]='Want Dub mode? Just add the "-m dub" argument'
 infoarray[4]="Date now is: $(date)"
-infoarray[5]="Super Idol的笑容都没你的甜八月正午的阳光都没你耀眼热爱 105 °C的你滴滴清纯的蒸馏水"
+infoarray[5]="Random Recommendation\n$(RandomRecommendation)"
 infoarray[6]="LMAO"
 infoarray[7]="Utility 2 Kinda Buggy, But Its Fast."
 infoarray[8]="I'm not english speaker, All of it are Translated"
@@ -55,7 +75,7 @@ ShowIt=$(($RANDOM % $NumArr))
 MainMenuMessage(){
 clear
 figlet -w $(tput cols) -c Emina-Cli | lolcat -S 10
-echoterd "Version: v0.6 Beta" 2>/dev/null
+echoterd "Version: v0.6.5 Beta" 2>/dev/null
 Text_Center "${infoarray[$ShowIt]}"
 echo
 }
@@ -83,6 +103,10 @@ RedCol() {
 
 AdditionalInfoFunc(){
 	tput setaf 2222; printf "[ADDITIONAL INFO] "; tput sgr0; printf "$1"; printf "\n"
+}
+
+NumberingFunc(){
+	tput setaf 987; printf "[$1] "; tput sgr0; printf "$2"; printf "\n"
 }
 
 InputSign(){
@@ -144,6 +168,11 @@ ErrorFunc4a() {
 	# Set [B] Package Errors
 ErrorFunc1b() {
     RedCol "[ERROR #1b] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc2b() {
+    RedCol "[ERROR #2b] "
     printf -- "%s" "$1"
     printf "\n"
 }
@@ -312,123 +341,6 @@ function isEmptyString(){
 function trimString(){
     local -r string="${1}"
     sed 's,^[[:blank:]]*,,' <<< "${string}" | sed 's,[[:blank:]]*$,,'
-}
-
-# Credits: https://github.com/pollev/bash_progress_bar
-# Thanks to Pollev
-
-CODE_SAVE_CURSOR="\033[s"
-CODE_RESTORE_CURSOR="\033[u"
-CODE_CURSOR_IN_SCROLL_AREA="\033[1A"
-COLOR_FG="\e[30m"
-COLOR_BG="\e[42m"
-COLOR_BG_BLOCKED="\e[43m"
-RESTORE_FG="\e[39m"
-RESTORE_BG="\e[49m"
-PROGRESS_BLOCKED="false"
-TRAPPING_ENABLED="false"
-TRAP_SET="false"
-CURRENT_NR_LINES=0
-
-setup_scroll_area() {
-    if [ "$TRAPPING_ENABLED" = "true" ]; then
-        trap_on_interrupt
-    fi
-    lines=$(tput lines)
-    CURRENT_NR_LINES=$lines
-    let lines=$lines-1
-    echo -en "\n"
-    echo -en "$CODE_SAVE_CURSOR"
-    echo -en "\033[0;${lines}r"
-    echo -en "$CODE_RESTORE_CURSOR"
-    echo -en "$CODE_CURSOR_IN_SCROLL_AREA"
-    draw_progress_bar 0
-}
-
-destroy_scroll_area() {
-    lines=$(tput lines)
-    echo -en "$CODE_SAVE_CURSOR"
-    echo -en "\033[0;${lines}r"
-    echo -en "$CODE_RESTORE_CURSOR"
-    echo -en "$CODE_CURSOR_IN_SCROLL_AREA"
-    clear_progress_bar
-    echo -en "\n\n"
-    if [ "$TRAP_SET" = "true" ]; then
-        trap - INT
-    fi
-}
-
-draw_progress_bar() {
-    percentage=$1
-    lines=$(tput lines)
-    let lines=$lines
-    if [ "$lines" -ne "$CURRENT_NR_LINES" ]; then
-        setup_scroll_area
-    fi
-    echo -en "$CODE_SAVE_CURSOR"
-    echo -en "\033[${lines};0f"
-    tput el
-    PROGRESS_BLOCKED="false"
-    print_bar_text $percentage
-    echo -en "$CODE_RESTORE_CURSOR"
-}
-
-block_progress_bar() {
-    percentage=$1
-    lines=$(tput lines)
-    let lines=$lines
-    # Save cursor
-    echo -en "$CODE_SAVE_CURSOR"
-    echo -en "\033[${lines};0f"
-    tput el
-    PROGRESS_BLOCKED="true"
-    print_bar_text $percentage
-    echo -en "$CODE_RESTORE_CURSOR"
-}
-
-clear_progress_bar() {
-    lines=$(tput lines)
-    let lines=$lines
-    # Save cursor
-    echo -en "$CODE_SAVE_CURSOR"
-    echo -en "\033[${lines};0f"
-    tput el
-    echo -en "$CODE_RESTORE_CURSOR"
-}
-
-print_bar_text() {
-    local percentage=$1
-    local cols=$(tput cols)
-    let bar_size=$cols-17
-    local color="${COLOR_FG}${COLOR_BG}"
-    if [ "$PROGRESS_BLOCKED" = "true" ]; then
-        color="${COLOR_FG}${COLOR_BG_BLOCKED}"
-    fi
-    let complete_size=($bar_size*$percentage)/100
-    let remainder_size=$bar_size-$complete_size
-    progress_bar=$(echo -ne "["; echo -en "${color}"; printf_new "#" $complete_size; echo -en "${RESTORE_FG}${RESTORE_BG}"; printf_new "." $remainder_size; echo -ne "]");
-    echo -ne " Progress ${percentage}% ${progress_bar}"
-}
-
-enable_trapping() {
-    TRAPPING_ENABLED="true"
-}
-
-trap_on_interrupt() {
-    TRAP_SET="true"
-    trap cleanup_on_interrupt INT
-}
-
-cleanup_on_interrupt() {
-    destroy_scroll_area
-    exit
-}
-
-printf_new() {
-    str=$1
-    num=$2
-    v=$(printf "%-${num}s" "$str")
-    echo -ne "${v// /$str}"
 }
 
 function ProgressBarModified(){
