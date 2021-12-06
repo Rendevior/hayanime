@@ -57,18 +57,22 @@ Program that allows you to download anime in command line.
 Options:
    -d                      : Uninstall Script with its Config Files
    -v                      : Show the version of the script
-   -m dub                  : Switch to Dub Mode (Dubbed Anime Only)
+   -m [mode]               : Specify Mode
    -i "<search query>"     : Search Anime and Print Info
    -s "<search query>"     : Search Anime
-   -e "<episode>"          : Number of Episode
-   -q "<quality>"          : Quality of Video
-   -p "<number>"           : Specify Picks in Anime Selection
-   -t "<server>"           : Specify Server (default, 1, 2, 3, 4)
+   -e "[episode]"          : Number of Episode
+   -q "[quality]"          : Quality of Video
+   -p "[number]"           : Specify Picks in Anime Selection
+   -t "[server]"           : Specify Server (default, 1, 2, 3, 4)
    -h                      : Show this help
 
 You can change Servers or Download Method by changing the value of the "server or utility" variable in /etc/emina/down.conf
 Option "-d" is to Uninstall this Script with /etc/emina/down.conf & /etc/emina/eminavars But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..
 Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..
+Option "-m [dub|watch]" will change Mode, (Default: None). Watch mode is not tested yet, Stable Release Soon..
+        dub                : Switch to Dub Mode (Dubbed Anime Only)
+        watch              : Switch to Watch Mode, Instead of Downloading the Episode it will open the Stream for you using (MPV)
+
 ```
 ## Features
 + You can Change Servers and method of Downloading to make it Fast as possible
@@ -85,12 +89,10 @@ Option "-t" will specify which server will used to download the File, if this ar
 
 + Bulk Downloads<br>
 > Ex. [+] Episode: *1-7*<br>
-+ Auto Install Prerequisites
++ Auto Install Prerequisites (Ubuntu and Debian Only)
 
 + ### Watch Mode
-```diff
-- Not yet implemented
-```
++ This option is on Beta Test, It may not work at some point.
 
 ## Bugs & Issues
 + If You Found Some Bugs, Feel Free to Create a New Issue
