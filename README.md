@@ -88,11 +88,12 @@ Option "-m [dub|watch]" will change Mode, (Default: None). Watch mode is not tes
 </div>
 
 + Bulk Downloads<br>
-> Ex. [+] Episode: *1-7*<br>
+  + > Ex. [+] Episode: *1-7*<br>
 + Auto Install Prerequisites (Ubuntu and Debian Only)
 
-+ ### Watch Mode
-+ This option is on Beta Test, It may not work at some point.
+### Watch Mode
++ It will open the Video Without Downloading it using MPV
+> Note: This option is on Beta Test, It may not work at some point.
 
 ## Bugs & Issues
 + If You Found Some Bugs, Feel Free to Create a New Issue
