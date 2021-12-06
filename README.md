@@ -1,5 +1,5 @@
 <div align="center">
-<h1>Emina-Cli <sup><sub><sup>v0.6 Beta</sup></sub></sup></h1>
+<h1>Emina-Cli <sup><sub><sup>v0.6.5 Beta</sup></sub></sup></h1>
 Yet Another Simple but Powerful Anime Downloader
 <br>
 <img src="https://user-images.githubusercontent.com/93582751/144230269-6d4aaceb-ca92-49f0-ae84-165c8800b3e8.gif" />
