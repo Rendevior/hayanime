@@ -1350,7 +1350,7 @@ function WatchGetData(){
 			sed 's|.m3u8|.480.m3u8|g'
 		)
 	fi
-	nohup mpv --http-header-fields="Referer: $BASE_URL" "$QualitySTREAM" >/dev/null 2>&1 &
+	setsid -f mpv --http-header-fields="Referer: $BASE_URL" "$QualitySTREAM" >/dev/null 2>&1
 }
 
 function WatchAnime(){
@@ -1412,9 +1412,9 @@ function ParseArgs(){
 		case "${opt}" in
 			d)
 				if [[ $EUID -ne 0 ]]; then
-					ErrorFunc1e 'Give this script Sudo Permission to Delete files'
+					ErrorFunc1g 'Give this script Sudo Permission to Delete files'
 					InfoFunc "Run: sudo $(basename $0) -d"
-					exit 5
+					exit 7
 				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				tput reset
