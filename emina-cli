@@ -41,13 +41,13 @@ else
 		source /etc/emina/eminavars
 	fi
 	BASE_URL="$(••••)"
-	if ! [ -f /usr/local/sbin/$(basename $0) ]; then
-		FileDir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
-		${PermsInst} cp $FileDir /usr/local/sbin/$(basename $0)
-		${PermsInst} chmod 0777 /usr/local/sbin/$(basename $0)
-		${PermsInst} rm $FileDir
+	if ! [ -f "/usr/local/sbin/$(basename "$0")" ]; then
+		FileDir="$(pwd -P)/$(basename "$0")"
+		${PermsInst} cp "$FileDir" "/usr/local/sbin/$(basename "$0")"
+		${PermsInst} chmod 0777 "/usr/local/sbin/$(basename "$0")"
+		${PermsInst} rm "$FileDir"
 		InfoFunc "The File was Moved!! You Can Execute it in any Directory"
-		InfoFunc "Run: $(basename $0)"
+		InfoFunc "Run: $(basename "$0")"
 		exit 0
 	fi
 }
@@ -177,7 +177,7 @@ function OverAllInputs(){
 		OverAllInputs
 	fi
 	if [[ $QualityPicker = "" ]]; then
-		read -p "$(InputSign 'Quality: ')" QualityPicker
+		read -rp "$(InputSign 'Quality: ')" QualityPicker
 	fi
 	InfoFunc "Please Wait... I'm doing my Job"
 }
@@ -246,10 +246,10 @@ function SeriesSelector(){
 		awk '/[d|D]ub/' | \
 		uniq | \
 		while read -r wiffles; do
-			if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
-				echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
+			if [[ "${#wiffles}" -gt 49 ]]; then
+				echo "${wiffles:0:49}..${wiffles:(${#wiffles}-10):${#wiffles}}"
 			else 
-				echo ${wiffles}
+				echo "${wiffles}"
 			fi
 		done | \
 		cat -n | \
@@ -266,10 +266,10 @@ function SeriesSelector(){
 		sed '/[d|D]ub/d' | \
 		uniq | \
 		while read -r wiffles; do
-			if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
-				echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
+			if [[ "${#wiffles}" -gt 49 ]]; then
+				echo "${wiffles:0:49}..${wiffles:(${#wiffles}-10):${#wiffles}}"
 			else 
-				echo ${wiffles}
+				echo "${wiffles}"
 			fi
 		done | \
 		cat -n | \
@@ -313,10 +313,7 @@ function SeriesSelectorPrt2(){
 function SpecialEpisodeChecker(){
 # Basically an Special Episode Checker ie. 6.5, 7.5
 	if [[ $DUBMODE == "1" ]]; then
-		SpecialEpiCheck1=$(
-			echo "$BASE_URL/videos/$SerNameFile-episode-1" | \
-			uniq
-		)
+		SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-episode-1"
 		SpecialEpiCheck1Load=$(
 			wget -qO- "$SpecialEpiCheck1"
 		)
@@ -353,10 +350,7 @@ function SpecialEpisodeChecker(){
 			tail -1
 		)
 	else
-		SpecialEpiCheck1=$(
-			echo "$BASE_URL/videos/$SerNameFile-episode-1" | \
-			uniq
-		)
+		SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-episode-1"
 		SpecialEpiCheck1Load=$(
 			wget -qO- "$SpecialEpiCheck1"
 		)
@@ -402,9 +396,9 @@ function SpecialEpisodeChecker(){
 # Range Downloads are Relying only on Default and Server 4 (Default to Avoid Downloading Issues)
 function DownloadUtilityForRange(){
 	if [[ "$EpisodeSelected" =~ "-" ]]; then
-		EpiScrape1="$(printf "$EpisodeSelected" | tr '-' "\n")"
-		EpiScrape2="$(printf "$EpiScrape1" | head -n -1)"
-		EpiScrape3="$(printf "$EpiScrape1" | tail -n -1)"
+		EpiScrape1="$(echo -e "$EpisodeSelected" | tr '-' "\n")"
+		EpiScrape2="$(echo -e "$EpiScrape1" | head -n -1)"
+		EpiScrape3="$(echo -e "$EpiScrape1" | tail -n -1)"
 			if ! [[ $EpiScrape2 =~ [0-9]* ]]; then
 				ErrorFunc3a "$EpiScrape2 <- Must be Number"
 				exit 1
@@ -414,11 +408,8 @@ function DownloadUtilityForRange(){
 			fi
 		MainMenuMessage
 		InfoFunc "Checking Episodes, Please Wait..."
-		for EpiCheck in $(seq $EpiScrape2 $EpiScrape3 | xargs); do
-			EPS=$(
-				echo "$SerNameFile-episode-$EpiCheck" | \
-				uniq
-			)
+		for EpiCheck in $(seq "$EpiScrape2" "$EpiScrape3" | xargs); do
+			EPS="$SerNameFile-episode-$EpiCheck"
 			DetectNotFound=$(
 				wget -qO- "$BASE_URL/videos/$EPS"
 			)
@@ -428,11 +419,8 @@ function DownloadUtilityForRange(){
 			fi
 		done
 # For Looping Arithmetic of Episodes
-		for ((i=$EpiScrape2;i<=$EpiScrape3;i++)); do
-			EPS=$(
-				echo "$SerNameFile-episode-$i" | \
-				uniq
-			)
+		for ((i=EpiScrape2;i<=EpiScrape3;i++)); do
+			EPS="$SerNameFile-episode-$i"
 			LinkFor=$(
 				wget -qO- "$BASE_URL/videos/$EPS" | \
 				pup 'div.play-video' | \
@@ -443,7 +431,7 @@ function DownloadUtilityForRange(){
 			)
 			if [[ "$LinkFor" == "" ]]; then
 				ErrorFunc2c "The Episode is Not Released yet (Not Exist)"
-				$(basename $0)
+				exit 3
 			fi
 			if [[ $server == "4" ]]; then
 				MainDirectLS4=$(
@@ -470,7 +458,7 @@ function DownloadUtilityForRange(){
 # Looping to Check Every Link, If it fails proceed to other Quality
 			for LISTER in $DirectDownLinksList; do
 				ConGrep=$(
-					curl -e $BASE_URL -LsI "$LISTER" | \
+					curl -e "$BASE_URL" -LsI "$LISTER" | \
 					grep -i Content-Length | \
 					awk '{print $2}' | \
 					tr -dc '[:print:]'
@@ -493,11 +481,11 @@ function DownloadUtilityForRange(){
 			if [[ "$utility" =~ $HHSS ]]; then
 				if [ "$utility" == "1" ]; then
 					trapDel
-					aria2c -x 16 -s 16 --console-log-level=error --referer=$BASE_URL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
+					aria2c -x 16 -s 16 --console-log-level=error --referer="$BASE_URL" --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
 					echo
 					TimeElapse=$(date +%s)
 					InfoFunc "Downloading Episode $i Done!!"
-					AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+					AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 				elif [ "$utility" == "2" ]; then
 					trapDel1
 					DownloaderOwn3 "$MainDirectL" "$FILEVIDNAME"
@@ -509,10 +497,7 @@ function DownloadUtilityForRange(){
 		done
 	else
 		if [[ "$EpisodeSelected" =~ [M|m]ovie ]]; then
-			EPS=$(
-				echo "$SerNameFile-episode-1" | \
-				uniq
-			)
+			EPS="$SerNameFile-episode-1"
 			FILEVIDNAME="$SerNameFile-MOVIE.mp4"
 		else
 			if [[ $EpisodeSelected =~ .*[.].* ]]; then
@@ -520,10 +505,7 @@ function DownloadUtilityForRange(){
 				echo "$EpisodeSelected" | tr '.' '-'
 				)
 			fi
-			EPS=$(
-				echo "$SerNameFile-episode-$EpisodeSelected" | \
-				uniq
-			)
+			EPS="$SerNameFile-episode-$EpisodeSelected"
 			FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
 		fi
 		if [[ $WatchAnime == "1" ]]; then
@@ -566,7 +548,7 @@ function CheckersIfAvailable(){
 	if [[ "$LinkFor" == "" ]]; then
 		ErrorFunc1d "Returned 404 Not Found"
 		exit 3
-	elif [[ "$(wget -qO- $LinkFor)" == *"Blocked"* ]]; then
+	elif [[ "$(wget -qO- "$LinkFor")" == *"Blocked"* ]]; then
 		ErrorFunc2d "Episode Unavailable"
 		exit 3
 	fi
@@ -585,7 +567,7 @@ function ServerGreppers(){
 			)
 			for LISTER in $DirectDownLinksList; do
 				ConGrep=$(
-					curl -e $BASE_URL -LsI "$LISTER" | \
+					curl -e "$BASE_URL" -LsI "$LISTER" | \
 					grep -i Content-Length | \
 					awk '{print $2}' | \
 					tr -dc '[:print:]'
@@ -658,16 +640,14 @@ function DownloaderOwn(){
 			awk '{print $2" "$3}' | \
 			sed 's|[][]||g'
 		)
-		barron=$(
-			echo "${bol1//[!0-9]/}"
-		)
+		barron="${bol1//[!0-9]/}"
 		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown $barron 100 $bol2
+			ProgressBarModifiedDown "$barron" 100 "$bol2"
 		fi
 	done
 	TimeElapse=$(date +%s)
 	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
+	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
 }
 
 function DownloaderOwn1(){
@@ -689,16 +669,14 @@ function DownloaderOwn1(){
 			awk '{print $2" "$3}' | \
 			sed 's|[][]||g'
 		)
-		barron=$(
-			echo "${bol1//[!0-9]/}"
-		)
+		barron="${bol1//[!0-9]/}"
 		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown $barron 100 $bol2
+			ProgressBarModifiedDown "$barron" 100 "$bol2"
 		fi
 	done
 	TimeElapse=$(date +%s)
 	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
+	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
 }
 
 # Only 2 Simultaneous Downloads to Prevent Rate Limiting
@@ -722,16 +700,14 @@ function DownloaderOwn2(){
 			awk '{print $2" "$3}' | \
 			sed 's|[][]||g'
 		)
-		barron=$(
-			echo "${bol1//[!0-9]/}"
-		)
+		barron="${bol1//[!0-9]/}"
 		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown $barron 100 $bol2
+			ProgressBarModifiedDown "$barron" 100 "$bol2"
 		fi
 	done
 	TimeElapse=$(date +%s)
 	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
+	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
 }
 
 function DownloaderOwn3(){
@@ -753,16 +729,14 @@ function DownloaderOwn3(){
 			awk '{print $2" "$3}' | \
 			sed 's|[][]||g'
 		)
-		barron=$(
-			echo "${bol1//[!0-9]/}"
-		)
+		barron="${bol1//[!0-9]/}"
 		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown $barron 100 $bol2
+			ProgressBarModifiedDown "$barron" 100 "$bol2"
 		fi
 	done
 	TimeElapse=$(date +%s)
 	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $i Done!!")"
+	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $i Done!!")"
 }
 
 #######################################
@@ -783,11 +757,11 @@ function DefaultQuality(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 16 -s 16 --console-log-level=error --referer=$BASE_URL --download-result=hide --auto-save-interval=0 "$MainDirectLink" -o $FILEVIDNAME
+			aria2c -x 16 -s 16 --console-log-level=error --referer="$BASE_URL" --download-result=hide --auto-save-interval=0 "$MainDirectLink" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn "$MainDirectLink" "$FILEVIDNAME"
@@ -821,15 +795,15 @@ function Server1(){
 		fi
 	done
 	ID=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $1}'
 	)
 	MODE=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $2}'
 	)
 	HASH=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $3}'
 	)
 	MainDownLink="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
@@ -854,11 +828,11 @@ function Server1(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 16 -s 16 --console-log-level=error --referer=$RootURL --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDirectL" -o $FILEVIDNAME
+			aria2c -x 16 -s 16 --console-log-level=error --referer="$RootURL" --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn1 "$MainDirectL" "$FILEVIDNAME"
@@ -880,15 +854,14 @@ function Server2(){
 		exit 2
 	fi
 	RootUrl="https://www.mp4upload.com"
-	if [[ "$(echo "$MainDownLink" | awk -F[://] '{print $1}')" == "http" ]]; then
-		MainDownLink=$(
-			echo "$MainDownLink" | \
-			sed 's|http://|https://|g'
-		)
+	if [[ "$(echo "$MainDownLink" | awk -F[:/] '{print $1}')" == "http" ]]; then
+		MainDownLink="${MainDownLink//http:/https:}"
+		# echo "$MainDownLink" | \
+		# sed 's|http://|https://|g'
 	fi
 # 1st Connection Bridge
 	Loader1STConn=$(
-		wget -qO- $MainDownLink
+		wget -qO- "$MainDownLink"
 	)
 	ID=$(
 		echo "$Loader1STConn" | \
@@ -903,7 +876,7 @@ function Server2(){
 		awk -F['"'] '{print $6}'
 	)
 	OUT=$(curl -s -X POST -d "op=download1&usr_login=&id=$ID&fname=$FNAME&referer=&method_free=+" "$MainDownLink")
-	echo $OUT > /dev/null #
+	echo "$OUT" > /dev/null
 # 2nd Connection Bridge
 	ID=$(
 		wget -qO- "$MainDownLink" | \
@@ -935,11 +908,11 @@ function Server2(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 2 -s 2 --console-log-level=error --referer "$RootUrl" --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDirectLUni" -o $FILEVIDNAME
+			aria2c -x 2 -s 2 --console-log-level=error --referer "$RootUrl" --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDirectLUni" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn2 "$MainDirectLUni" "$FILEVIDNAME"
@@ -970,7 +943,7 @@ function Server3(){
 		curl -s -X POST -e "https://fplayer.info" "$GetAPIServ1" | \
 		grep -o "https:[^'\"<>]*" | \
 		grep 'fvs' | \
-		tr -d '\\' | \
+		sed 's/[\]//g' | \
 		tac | \
 		xargs
 	)
@@ -996,11 +969,11 @@ function Server3(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 2 -s 2 --console-log-level=error --referer=$RootURL --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDownL" -o $FILEVIDNAME
+			aria2c -x 2 -s 2 --console-log-level=error --referer=$RootURL --check-certificate=false --download-result=hide --auto-save-interval=0 "$MainDownL" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn1 "$MainDownL" "$FILEVIDNAME"
@@ -1047,11 +1020,11 @@ function Server4(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 16 -s 16 --console-log-level=error --download-result=hide --auto-save-interval=0 "$MainDownL" -o $FILEVIDNAME
+			aria2c -x 16 -s 16 --console-log-level=error --download-result=hide --auto-save-interval=0 "$MainDownL" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn "$MainDownL" "$FILEVIDNAME"
@@ -1072,7 +1045,7 @@ function LowQuality(){
 		head -1
 	)
 	ConGrep=$(
-		curl -e $BASE_URL -LsI "$MainDirectL" | \
+		curl -e "$BASE_URL" -LsI "$MainDirectL" | \
 		grep -i Content-Length | \
 		awk '{print $2}' | \
 		tr -dc '[:print:]'
@@ -1084,11 +1057,11 @@ function LowQuality(){
 	if [[ "$utility" =~ $HHSS ]]; then
 		if [ "$utility" == "1" ]; then
 			trapDel
-			aria2c -x 16 -s 16 --console-log-level=error --referer=$BASE_URL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o $FILEVIDNAME
+			aria2c -x 16 -s 16 --console-log-level=error --referer="$BASE_URL" --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn "$MainDirectL" "$FILEVIDNAME"
@@ -1113,15 +1086,15 @@ function Server1Low(){
 		awk -F["'"] '{print $2" "$4" "$6}'
 	)
 	ID=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $1}'
 	)
 	MODE=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $2}'
 	)
 	HASH=$(
-		echo $VaLMain | \
+		echo "$VaLMain" | \
 		awk '{print $3}'
 	)
 	MainDownLink="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
@@ -1146,11 +1119,11 @@ function Server1Low(){
 		if [ "$utility" == "1" ]; then
 			TimeStart=$(date +%s)
 			trapDel
-			aria2c -x 16 -s 16 --console-log-level=error --referer=$RootURL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o $FILEVIDNAME
+			aria2c -x 16 -s 16 --console-log-level=error --referer=$RootURL --download-result=hide --auto-save-interval=0 "$MainDirectL" -o "$FILEVIDNAME"
 			echo
 			TimeElapse=$(date +%s)
 			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( $TimeElapse - $TimeStart ))) to Finish"
+			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
 		elif [ "$utility" == "2" ]; then
 			trapDel1
 			DownloaderOwn1 "$MainDirectL" "$FILEVIDNAME"
@@ -1226,21 +1199,21 @@ function SearchArgsInf(){
 		wget -qO- "https://gogoanime.cm/search.html?keyword=$KeyWord&page=2"
 	} | \
 	pup 'p[class="name"]' | \
-	grep -o "<a.*href=".*".*title=".*">" | \
+	grep -o '<a.*href=".*".*title=".*">' | \
 	grep -o 'title=".*"' | \
 	awk -F['"'] '{print $2}' | \
 	while read -r wiffles; do
-		if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
-			echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)}
+		if [[ "${#wiffles}" -gt 49 ]]; then
+			echo "${wiffles:0:49}..${wiffles:(${#wiffles}-10):${#wiffles}}"
 		else 
-			echo ${wiffles}
+			echo "${wiffles}"
 		fi
 	done | \
 	cat -n | \
 	sed 's/\t/+ /g' | \
 	sed 's/^ *//g' | \
 	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
-	read -p "$(InputSign 'Enter a Number: ')" SelectedQuery
+	read -rp "$(InputSign 'Enter a Number: ')" SelectedQuery
 	QuerySelectLink=$(
 		wget -qO- "https://gogoanime.cm/search.html?keyword=$KeyWord" | \
 		pup 'p[class="name"]' | \
@@ -1294,10 +1267,7 @@ function SearchArgsInf(){
 }
 
 function CallWatchSequence(){
-	EPS=$(
-		echo "$SerNameFile-episode-$EpisodeSelected" | \
-		uniq
-	)
+	EPS="$SerNameFile-episode-$EpisodeSelected"
 	FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
 }
 
@@ -1333,22 +1303,19 @@ function WatchGetData(){
 		head -1
 	)
 	if [[ $QualityPicker =~ [H|h]igh ]]; then
-		QualitySTREAM=$(
-			echo "$GetSTREAM" | \
-			sed 's|.m3u8|.1080.m3u8|g'
-		)
+		QualitySTREAM="${GetSTREAM//.m3u8/.1080.m3u8}"
+		# echo "$GetSTREAM" | \
+		# sed 's|.m3u8|.1080.m3u8|g'
 		if [[ -z $QualitySTREAM ]]; then
 			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-			QualitySTREAM=$(
-				echo "$GetSTREAM" | \
-				sed 's|.m3u8|.720.m3u8|g'
-			)
+			QualitySTREAM="${GetSTREAM//.m3u8/.720.m3u8}"
+			# echo "$GetSTREAM" | \
+			# sed 's|.m3u8|.720.m3u8|g'
 		fi
 	elif [[ $QualityPicker =~ [L|l]ow ]]; then
-		QualitySTREAM=$(
-			echo "$GetSTREAM" | \
-			sed 's|.m3u8|.480.m3u8|g'
-		)
+		QualitySTREAM="${GetSTREAM//.m3u8/.480.m3u8}"
+		# echo "$GetSTREAM" | \
+		# sed 's|.m3u8|.480.m3u8|g'
 	fi
 	setsid -f mpv --http-header-fields="Referer: $BASE_URL" "$QualitySTREAM" >/dev/null 2>&1
 }
@@ -1361,10 +1328,10 @@ function WatchAnime(){
 			echo "$QueryDetect" | \
 			sed -n "$SeriesSelected"p | \
 			while read -r wiffles; do
-				if [[ $(echo $wiffles | wc -m) -gt 49 ]]; then
-					echo ${wiffles:0:49}..${wiffles:($(echo $wiffles | wc -m)-10):$(echo $wiffles | wc -m)} | lolcat -S 20
+				if [[ ${#wiffles} -gt 49 ]]; then
+					echo "${wiffles:0:49}..${wiffles:(${#wiffles}-10):${#wiffles}}"
 				else 
-					echo ${wiffles} | lolcat -S 20
+					echo "${wiffles}"
 				fi
 			done
 		)
@@ -1413,17 +1380,17 @@ function ParseArgs(){
 			d)
 				if [[ $EUID -ne 0 ]]; then
 					ErrorFunc1g 'Give this script Sudo Permission to Delete files'
-					InfoFunc "Run: sudo $(basename $0) -d"
+					InfoFunc "Run: sudo $(basename "$0") -d"
 					exit 7
 				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				tput reset
-				FileDir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
-				rm $FileDir
+				FileDir="$(pwd -P)/$(basename "$0")"
+				rm "$FileDir"
 				rm -r /etc/emina
 				for barmod in $(seq 1 100); do
 					sleep 0.001
-					ProgressBarModifiedUnin ${barmod} 100
+					ProgressBarModifiedUnin "${barmod}" 100
 				done
 				printf '\n'
 				InfoFunc "Uninstalling Completed!"
