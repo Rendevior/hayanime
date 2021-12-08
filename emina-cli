@@ -1585,8 +1585,8 @@ function MainFunction(){
 }
 
 if [[ $(cat /etc/*-release) =~ Ubuntu|Debian ]]; then
-	StallConfigs
 	InstallPrerequisites
+	StallConfigs
 else
 	StallConfigs
 	PackageChecks
