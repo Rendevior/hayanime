@@ -1,4 +1,5 @@
-#!/bin/bash
+# This Functions Are Used for Emina-Cli
+# Do Not Edit if you don't know what you're doing. It may not work
 # All Functions
 function echoterd (){
     [[ $# == 0 ]] && return 1
@@ -20,7 +21,24 @@ function echoterd (){
 }
 
 function Text_Center(){
-	echo -e "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c $(tput cols)
+	echo -e "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c "$(tput cols)"
+}
+
+function CenteredGrid(){
+	cat /dev/stdin | \
+	while read -r linerd; do
+		echo "$linerd" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c "$(tput cols)"
+	done
+}
+
+function Banner(){
+cat <<"EOF"
+ _____           _                    ____ _ _ 
+| ____|_ __ ___ (_)_ __   __ _       / ___| (_)
+|  _| | '_ ` _ \| | '_ \ / _` |_____| |   | | |
+| |___| | | | | | | | | | (_| |_____| |___| | |
+|_____|_| |_| |_|_|_| |_|\__,_|      \____|_|_|
+EOF
 }
 
 ••(){ printf "G44DOOBWGQZDAMTEG4ZDEMBSMQ3TANZT" | base32 -d | xxd -r -ps; }
@@ -40,42 +58,23 @@ function TimeTranslate {
   printf '%d Secs\n' $S
 }
 
-function RandomRecommendation(){
-	RandGenre=$(
-		wget -qO- "https://www1.gogoanime.cm/" | \
-		pup 'li[class="movie genre hide"]' | \
-		grep -o "/genre[^'\"<>]*" | \
-		shuf | \
-		sed -n '1'p
-	)
-	RandPickAni=$(
-		wget -qO- "https://www1.gogoanime.cm$RandGenre" | \
-		pup 'p.name' | \
-		grep -o '".*"' | \
-		awk -F['"'] '{print $4}' | \
-		sed '/^$/d' | \
-		shuf | \
-		sed -n '1'p
-	)
-	echo "$RandPickAni"
-}
-
-infoarray[0]="Utility 2 and Default Server Is the best Combination Believe me"
+infoarray[0]="It's so easy to use!"
 infoarray[1]="You can change Servers at /etc/emina/down.conf"
 infoarray[2]="Don't be Evil"
 infoarray[3]='Want Dub mode? Just add the "-m dub" argument'
 infoarray[4]="Date now is: $(date)"
-infoarray[5]="Random Recommendation\n$(RandomRecommendation)"
-infoarray[6]="LMAO"
-infoarray[7]="Utility 2 Kinda Buggy, But Its Fast."
-infoarray[8]="I'm not english speaker, All of it are Translated"
+infoarray[5]="LMAO"
+infoarray[6]="Utility 2 Kinda Buggy, But Its Fast."
+infoarray[7]="I'm not english speaker, All of it are Translated"
+infoarray[8]="Report Bugs and Unknown Errors on Repo"
 NumArr=${#infoarray[@]}
-ShowIt=$(($RANDOM % $NumArr))
+ShowIt=$(( RANDOM % NumArr ))
 
 MainMenuMessage(){
 clear
-figlet -w $(tput cols) -c Emina-Cli | lolcat -S 10
-echoterd "Version: v0.6.5 Beta" 2>/dev/null
+tput setaf "$(( RANDOM % 256 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
+echo
+echoterd "Version: v0.6.7 Beta" 2>/dev/null
 Text_Center "${infoarray[$ShowIt]}"
 echo
 }
@@ -208,6 +207,11 @@ ErrorFunc4d() {
     printf -- "%s" "$1"
     printf "\n"
 }
+ErrorFunc5d() {
+    RedCol "[ERROR #5d] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
 	# Set [E] Config Errors at /etc/emina/down.conf
 ErrorFunc1e() {
     RedCol "[ERROR #1e] "
@@ -240,9 +244,9 @@ ErrorFunc4f() {
     printf -- "%s" "$1"
     printf "\n"
 }
-	# Set [E] Permissions Error
+	# Set [G] Permissions Error
 ErrorFunc1e() {
-    RedCol "[ERROR #1e] "
+    RedCol "[ERROR #1g] "
     printf -- "%s" "$1"
     printf "\n"
 }
@@ -256,6 +260,7 @@ trapDel(){
 ctrl_c(){
 	rm $FILEVIDNAME
 	rm $FILEVIDNAME.aria2
+	echo ""
 	WarningFunc "Downloads Interrupted, File not downloaded"
 	exit 1
 }
@@ -308,7 +313,7 @@ function printTable(){
             done
             if [[ "$(isEmptyString "${table}")" = 'false' ]]
             then
-                echo -e "${table}" | column -s '#' -t | awk '/^\+/{gsub(" ", "-", $0)}1'
+                echo -e "${table}" | column -s '#' -t | while read -r lookspace; do if [[ $lookspace =~ ^\+ ]]; then echo "$lookspace" | sed 's| |-|g'; else echo "$lookspace"; fi; done
             fi
         fi
     fi
