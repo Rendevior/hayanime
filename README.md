@@ -1,5 +1,5 @@
 <div align="center">
-<h1>Emina-Cli <sup><sub><sup>v0.6.5 Beta</sup></sub></sup></h1>
+<h1>Emina-Cli <sup><sub><sup>v0.6.7 Beta</sup></sub></sup></h1>
 Yet Another Simple but Powerful Anime Downloader
 <br>
 <img src="https://user-images.githubusercontent.com/93582751/144230269-6d4aaceb-ca92-49f0-ae84-165c8800b3e8.gif" />
@@ -7,9 +7,17 @@ Yet Another Simple but Powerful Anime Downloader
 
 ## Installation
 Update and Upgrade All Packages Available
++ Ubuntu/Debian and Later
 ```
 ~# sudo apt-get update -y
 ~# sudo apt-get upgrade -y
+~# sudo apt-get install make -y
+```
++ CentOS/RHEL
+```
+~# sudo yum update -y
+~# sudo yum upgrade -y
+~# sudo yum make -y
 ```
 Now Install it
 ```
@@ -31,48 +39,56 @@ emina-cli
 | Quality | high, low, High, Low |
 </div>
 
-## Tested OS
+## Tested Distros
 + Ubuntu 16 up
 + Debian 9 up
++ CentOS 7 up
++ RHEL
+> Consider Trying it in Other OS
 ## Prerequisites 
-+ *Bash (any version)*<br>
-+ *Curl (any version)*<br>
 + *Axel*
 + *Grep*
 + *Aria2c*
-+ *Pup*
-+ *Sed*
-+ *Awk*
-+ *Ruby*
-+ *GoLang*
 + *Recode*
++ *Sed*
++ *Mawk*
++ *Awk*
++ *CoreUtils*
 ## Option / Args
 ```
 Usage: emina-cli -i "<search query>"
 Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]
 Usage: emina-cli [arguments...]
 
-Program that allows you to download anime in command line.
+Program that allows you to download and watch anime via command line.
 
 Options:
-   -d                      : Uninstall Script with its Config Files
-   -v                      : Show the version of the script
-   -m [mode]               : Specify Mode
-   -i "<search query>"     : Search Anime and Print Info
-   -s "<search query>"     : Search Anime
-   -e "[episode]"          : Number of Episode
-   -q "[quality]"          : Quality of Video
-   -p "[number]"           : Specify Picks in Anime Selection
-   -t "[server]"           : Specify Server (default, 1, 2, 3, 4)
-   -h                      : Show this help
+   -d                            : Uninstall Script with its Config Files
+   -v                            : Show the version of the script
+   -m "[mode]"                   : Specify Mode
+   -s "<search query>"           : Search Anime
+   -e "[episode]"                : Number of Episode
+   -q "[quality]"                : Quality of Video
+   -p "[number]"                 : Specify Picks in Anime Selection
+   -t "[server]"                 : Specify Server (default, 1, 2, 3)
+   -h                            : Show this help
+
+Misc:
+   -i "<search query>"           : Search Anime and Print Info
+   -H                            : Print History File
+   -D                            : Clear History File
 
 You can change Servers or Download Method by changing the value of the "server or utility" variable in /etc/emina/down.conf
-Option "-d" is to Uninstall this Script with /etc/emina/down.conf & /etc/emina/eminavars But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..
-Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..
-Option "-m [dub|watch]" will change Mode, (Default: None). Watch mode is not tested yet, Stable Release Soon..
-        dub                : Switch to Dub Mode (Dubbed Anime Only)
-        watch              : Switch to Watch Mode, Instead of Downloading the Episode it will open the Stream for you using (MPV)
 
+Option "-d" is to Uninstall this Script with /etc/emina/down.conf & /etc/emina/eminavars But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..
+
+Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..
+
+Option "-m [dub|watch]" will change Mode, (Default: None). Watch mode is not tested yet, Stable Release Soon..
+    dub                      : Switch to Dub Mode (Dubbed Anime Only)
+    watch                    : Switch to Watch Mode, Instead of Downloading the Episode it will open the Stream for you using (MPV)
+
+Option "-q" flag ignored when downloading Range of Episodes (Default: High)
 ```
 ## Features
 + You can Change Servers and method of Downloading to make it Fast as possible
@@ -83,13 +99,13 @@ Option "-m [dub|watch]" will change Mode, (Default: None). Watch mode is not tes
 
 | Variable | Posible Values |
 | ------------- | ---------- |
-| Server | default, 1, 2, 3, 4 |
+| Server | default, 1, 2, 3 |
 | Download Method | 1, 2 |
 </div>
 
 + Bulk Downloads<br>
   + > Ex. [+] Episode: *1-7*<br>
-+ Auto Install Prerequisites (Ubuntu and Debian Only)
++ Auto Install Prerequisites (Ubuntu/Debian and CentOS/RHEL only)
 
 ### Watch Mode
 + It will open the Video Without Downloading it using MPV
