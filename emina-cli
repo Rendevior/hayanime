@@ -4,9 +4,9 @@
 # 
 #                    Version: v0.6.7 Beta (Improved Version)
 #                        Statistics:
-#                     Total Words: 6824
-#                  Total Character: 49024
-#                     Total Lines: 1859
+#                     Total Words: 6689
+#                  Total Character: 50967
+#                     Total Lines: 1927
 # 
 #   Dependencies: coreutils(bc, wc, xxd), recode, axel, aria2c, mawk
 #
@@ -27,6 +27,10 @@ PermsInst="sudo"
 
 # Is to install the Configs and Variables Stored in "/etc/emina" directory
 function StallConfigs(){
+	if ! [ -x "$(command -v wget)" ]; then
+		echo "Install wget first to continue""
+		exit 1
+	fi
 	if [ -f /etc/emina/down.conf ]; then
 		source /etc/emina/down.conf
 	else
@@ -105,9 +109,9 @@ function PackageChecks(){
 }
 
 function InstallPrerequisitesRedHatBased(){
-	if ! [[ -x $(command -v dnf) ]]; then
+	if [[ -x $(command -v dnf) ]]; then
 		dmnerger="yum"
-	elif ! [[ -x $(command -v yum) ]]; then
+	elif [[ -x $(command -v yum) ]]; then
 		dmnerger="dnf"
 	else
 		ErrorFunc1b "DNF/YUM not found"
@@ -1886,8 +1890,7 @@ function ErrorHelp(){
 	echo -e '   -H#: Print History File'
 	echo -e '   -D#: Clear History File'
 	echo -e '͐'
-	printf 'You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && printf '/etc/emina/down.conf' && tput sgr 0
-	echo -e '͐'
+	printf 'You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && echo '/etc/emina/down.conf' && tput sgr 0
 	echo -e '͐'
 	printf 'Option "-d" is to Uninstall this Script with ' && tput setab 8 && printf '/etc/emina/down.conf & /etc/emina/eminavars' && tput sgr 0 && echo -e ' But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..'
 	echo -e '͐'
@@ -1897,7 +1900,7 @@ function ErrorHelp(){
 	echo -e "\tdub#: Switch to Dub Mode (Dubbed Anime Only)"
 	echo -e "\twatch#: Switch to Watch Mode, Instead of Downloading the Episode it will open the Stream for you using (MPV)"
 	echo -e '͐'
-	echo 'The "-q" flag ignored when downloading Range of Episodes (Default: High)'
+	echo 'Option "-q" flag ignored when downloading Range of Episodes (Default: High)'
 	echo -e '͐'
 }
 
