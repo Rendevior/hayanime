@@ -28,7 +28,7 @@ PermsInst="sudo"
 # Is to install the Configs and Variables Stored in "/etc/emina" directory
 function StallConfigs(){
 	if ! [ -x "$(command -v wget)" ]; then
-		echo "Install wget first to continue""
+		echo "Install wget first to continue"
 		exit 1
 	fi
 	if [ -f /etc/emina/down.conf ]; then
@@ -361,7 +361,7 @@ function SeriesSelectorPrt2(){
 	fi
 	SerNameFile=$(
 		echo "$SeriesLinkPicked" | \
-		awk -F[/] '{print $5}'    
+		awk -F[/] '{print $5}'
 	)
 }
 
