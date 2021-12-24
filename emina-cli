@@ -1663,10 +1663,7 @@ function WatchGetData(){
 	ParseToHist "Watch"
 	if [[ $VidPlayer == "mpv" ]]; then
 		if [[ $server == "default" ]]; then
-			refSet=$(
-				echo "$BASE_URL" | \
-				sed 's|https://||g'
-			)
+			refSet="gogoplay1.com"
 		else
 			refSet="$QualitySTREAM"
 		fi
@@ -1677,10 +1674,7 @@ function WatchGetData(){
 			exit 1
 		fi
 		if [[ $server == "default" ]]; then
-			refSet=$(
-				echo "$BASE_URL" | \
-				sed 's|https://||g'
-			)
+			refSet="gogoplay1.com"
 		else
 			refSet="$QualitySTREAM"
 		fi
