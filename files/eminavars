@@ -65,8 +65,10 @@ infoarray[3]='Want Dub mode? Just add the "-m dub" argument'
 infoarray[4]="Date now is: $(date)"
 infoarray[5]="LMAO"
 infoarray[6]="Utility 2 Kinda Buggy, But Its Fast."
-infoarray[7]="I'm not english speaker, All of it are Translated"
-infoarray[8]="Report Bugs and Unknown Errors on Repo"
+infoarray[7]="Report Bugs and Unknown Errors on Repo"
+infoarray[8]="There was only 3 servers on Watch Mode (default, 1, 2)"
+infoarray[9]='Specification Arg Flags may help you to automate, more info in "-h"'
+infoarray[10]="Checkings are Kinda slow to ensure that theres no error and Scraping Problems"
 NumArr=${#infoarray[@]}
 ShowIt=$(( RANDOM % NumArr ))
 
@@ -74,7 +76,7 @@ MainMenuMessage(){
 clear
 tput setaf "$(( RANDOM % 256 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
 echo
-echoterd "Version: v0.6.7 Beta" 2>/dev/null
+echoterd "Version: v0.6.9 Beta" 2>/dev/null
 Text_Center "${infoarray[$ShowIt]}"
 echo
 }
@@ -85,8 +87,8 @@ function UnitConversion(){
 	MB=$(bc -l <<< "scale=2; $B/1024/1024")
 	GB=$(bc -l <<< "scale=2; $B/1024/1024/1024")
 	TB=$(bc -l <<< "scale=2; $GB/1024")
-	[[ $(echo "$TB" | awk -F [.] '{print $1}') > 0 ]] && echo "$TB TB" && return
-	[[ $(echo "$GB" | awk -F [.] '{print $1}') > 0 ]] && echo "$GB GB" && return
+	[[ $(echo "$TB" | awk -F[.] '{print $1}') > 0 ]] && echo "$TB TB" && return
+	[[ $(echo "$GB" | awk -F[.] '{print $1}') > 0 ]] && echo "$GB GB" && return
 	[[ $(echo "$MB" | awk -F[.] '{print $1}') > 0 ]] && echo "$MB MB" && return
 	[[ $(echo "$KB" | awk -F[.] '{print $1}') > 0 ]] && echo "$KB KB" && return
 	[[ $(echo "$B" | awk -F[.] '{print $1}') > 0 ]] && echo "$B B"
@@ -145,108 +147,113 @@ WarningFunc() {
 # Handling Errors
 	# Set [A] Input Errors
 ErrorFunc1a() {
-    RedCol "[ERROR #1a] "
+    RedCol "ERROR [#1a] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2a() {
-    RedCol "[ERROR #2a] "
+    RedCol "ERROR [#2a] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc3a() {
-    RedCol "[ERROR #3a] "
+    RedCol "ERROR [#3a] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc4a() {
-    RedCol "[ERROR #4a] "
+    RedCol "ERROR [#4a] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [B] Package Errors
 ErrorFunc1b() {
-    RedCol "[ERROR #1b] "
+    RedCol "ERROR [#1b] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2b() {
-    RedCol "[ERROR #2b] "
+    RedCol "ERROR [#2b] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc3b() {
+    RedCol "ERROR [#3b] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [C] Indexing Errors
 ErrorFunc1c() {
-    RedCol "[ERROR #1c] "
+    RedCol "ERROR [#1c] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2c() {
-    RedCol "[ERROR #2c] "
+    RedCol "ERROR [#2c] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [D] Server Errors
 ErrorFunc1d() {
-    RedCol "[ERROR #1d] "
+    RedCol "ERROR [#1d] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2d() {
-    RedCol "[ERROR #2d] "
+    RedCol "ERROR [#2d] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc3d() {
-    RedCol "[ERROR #3d] "
+    RedCol "ERROR [#3d] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc4d() {
-    RedCol "[ERROR #4d] "
+    RedCol "ERROR [#4d] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc5d() {
-    RedCol "[ERROR #5d] "
+    RedCol "ERROR [#5d] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [E] Config Errors at /etc/emina/down.conf
 ErrorFunc1e() {
-    RedCol "[ERROR #1e] "
+    RedCol "ERROR [#1e] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2e() {
-    RedCol "[ERROR #2e] "
+    RedCol "ERROR [#2e] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [F] Argument Errors
 ErrorFunc1f() {
-    RedCol "[ERROR #1f] "
+    RedCol "ERROR [#1f] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc2f() {
-    RedCol "[ERROR #2f] "
+    RedCol "ERROR [#2f] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc3f() {
-    RedCol "[ERROR #3f] "
+    RedCol "ERROR [#3f] "
     printf -- "%s" "$1"
     printf "\n"
 }
 ErrorFunc4f() {
-    RedCol "[ERROR #4f] "
+    RedCol "ERROR [#4f] "
     printf -- "%s" "$1"
     printf "\n"
 }
 	# Set [G] Permissions Error
-ErrorFunc1e() {
-    RedCol "[ERROR #1g] "
+ErrorFunc1g() {
+    RedCol "ERROR [#1g] "
     printf -- "%s" "$1"
     printf "\n"
 }
@@ -257,6 +264,7 @@ trapDel(){
 	trap ctrl_c INT
 }
 
+# Delete if Interrupted, Continuing downloads might be implemented soon
 ctrl_c(){
 	rm $FILEVIDNAME
 	rm $FILEVIDNAME.aria2
@@ -269,6 +277,7 @@ trapDel1(){
 	trap ctrl_c1 INT
 }
 
+# Delete if Interrupted, Continuing downloads might be implemented soon
 ctrl_c1(){
 	rm $FILEVIDNAME
 	rm $FILEVIDNAME.st
