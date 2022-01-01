@@ -25,10 +25,7 @@ function Text_Center(){
 }
 
 function CenteredGrid(){
-	cat /dev/stdin | \
-	while read -r linerd; do
-		echo "$linerd" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c "$(tput cols)"
-	done
+	sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" /dev/stdin | tr '\n' '\r'
 }
 
 function Banner(){
@@ -41,6 +38,7 @@ cat <<"EOF"
 EOF
 }
 
+# Calculations
 ••(){ printf "G44DOOBWGQZDAMTEG4ZDEMBSMQ3TANZT" | base32 -d | xxd -r -ps; }
 •••(){ printf "626173653634" | $(••); }
 ••••(){ printf "Njg3NDc0NzA3MzNhMmYyZjY3NmY2NzZmNzA2YzYxNzkzMTJlNjM2ZjZk" | $(•••) -d | $(••); }
@@ -69,16 +67,16 @@ infoarray[7]="Report Bugs and Unknown Errors on Repo"
 infoarray[8]="There was only 3 servers on Watch Mode (default, 1, 2)"
 infoarray[9]='Specification Arg Flags may help you to automate, more info in "-h"'
 infoarray[10]="Checkings are Kinda slow to ensure that theres no error and Scraping Problems"
-NumArr=${#infoarray[@]}
-ShowIt=$(( RANDOM % NumArr ))
 
-MainMenuMessage(){
-clear
-tput setaf "$(( RANDOM % 256 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
-echo
-echoterd "Version: v0.6.9 Beta" 2>/dev/null
-Text_Center "${infoarray[$ShowIt]}"
-echo
+function MainMenuMessage(){
+	clear
+	tput setaf "$(( RANDOM % 256 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
+	echo
+	echoterd "Version: v0.7"
+	NumArr=${#infoarray[@]}
+	ShowIt=$(( RANDOM % NumArr ))
+	Text_Center "${infoarray[$ShowIt]}"
+	echo
 }
 
 function UnitConversion(){
@@ -99,7 +97,7 @@ ErrorCatchFunc(){
 }
 
 RedCol() {
-    printf '\033[1;31;31m%b\033[0m' "$1"
+	printf '\033[1;31;31m%b\033[0m' "$1"
 }
 
 AdditionalInfoFunc(){
@@ -179,6 +177,11 @@ ErrorFunc2b() {
 }
 ErrorFunc3b() {
     RedCol "ERROR [#3b] "
+    printf -- "%s" "$1"
+    printf "\n"
+}
+ErrorFunc4b() {
+    RedCol "ERROR [#4b] "
     printf -- "%s" "$1"
     printf "\n"
 }
@@ -322,7 +325,7 @@ function printTable(){
             done
             if [[ "$(isEmptyString "${table}")" = 'false' ]]
             then
-                echo -e "${table}" | column -s '#' -t | while read -r lookspace; do if [[ $lookspace =~ ^\+ ]]; then echo "$lookspace" | sed 's| |-|g'; else echo "$lookspace"; fi; done
+                echo -e "${table}" | column -s '#' -t | awk '/^\+/{gsub(" ", "-", $0)}1'
             fi
         fi
     fi
