@@ -160,6 +160,10 @@ function OverAllInputs(){
 			unset AnimeSearch
 			read -rp "$(InputSign 'Search Anime: ')" AnimeSearch
 		else
+			AnimeSearch=$(
+				echo "$AnimeSearch" | \
+				tr '[:upper:]' '[:lower:]'
+			)
 			break
 		fi
 	done
@@ -195,10 +199,6 @@ function OverAllInputs(){
 			unset SeriesSelected
 			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
 		else
-			SeriesSelected=$(
-				echo "$SeriesSelected" | \
-				tr '[:upper:]' '[:lower:]'
-			)
 			break
 		fi
 	done
@@ -260,12 +260,12 @@ function SearchPageLoad(){
 
 # Search Anime Function and Pass to Series Selection Function
 function SearchForAnime(){
-	SearchPageLoad
 # Convert Spaces into Plus Sign
     AnimeSearch=$(
 		echo "$AnimeSearch" | \
-		tr " " +
+		tr "[:space:]" "+"
 	)
+	SearchPageLoad
 # Scrapes to Check is Available First
 	if [[ $DUBMODE == "1" ]]; then
 		QueryDetect=$(
