@@ -2,7 +2,7 @@
 #
 # Emina-Cli is a Free OpenSource Anime Downloader for Linux
 # 
-#                    Version: v0.6.9 Beta (Improved Version)
+#                    Version: v0.7 (Stable Release)
 #                        Statistics:
 #                     Total Words: 6689
 #                  Total Character: 50967
@@ -41,7 +41,7 @@ else
 	fi
 	BASE_URL="$(••••)"
 	if ! [[ -e /etc/emina/.cache ]]; then
-		touch /etc/emina/.cache
+		touch /etc/emina/.cache >/dev/null 2>&1
 	fi
 	if ! [ -f "/usr/local/sbin/$(basename "$0")" ]; then
 		FileDir="$(dirname "$(readlink -f "$0")")/$(basename "$0")"
@@ -195,6 +195,10 @@ function OverAllInputs(){
 			unset SeriesSelected
 			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
 		else
+			SeriesSelected=$(
+				echo "$SeriesSelected" | \
+				tr '[:upper:]' '[:lower:]'
+			)
 			break
 		fi
 	done
@@ -350,7 +354,7 @@ function SeriesSelectorPrt2(){
 			awk '/[d|D]ub/' | \
 			sed -n "$SeriesSelected"p | \
 			sed "s|/videos|$BASE_URL/videos|g" | \
-			sed 's|-episode-[0-9].*||g'
+			sed 's|-episode-[0-9].*||g;s|-[0-9]*$||g'
 		)
 	else
 		SeriesLinkPicked=$(
@@ -360,7 +364,7 @@ function SeriesSelectorPrt2(){
 			sed '/[d|D]ub/d' | \
 			sed -n "$SeriesSelected"p | \
 			sed "s|/videos|$BASE_URL/videos|g" | \
-			sed 's|-episode-[0-9].*||g'
+			sed 's|-episode-[0-9].*||g;s|-[0-9]*$||g'
 		)
 	fi
 	SerNameFile=$(
@@ -376,6 +380,13 @@ function SpecialEpisodeChecker(){
 		SpecialEpiCheck1Load=$(
 			curl -sL "$SpecialEpiCheck1"
 		)
+		if [[ $SpecialEpiCheck1Load =~ 404 ]]; then
+			Fails="true"
+			SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-1"
+			SpecialEpiCheck1Load=$(
+				curl -sL "$SpecialEpiCheck1"
+			)
+		fi
 		SpecialEpiCheck2=$(
 			echo "$SpecialEpiCheck1Load" | \
 			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
@@ -415,6 +426,13 @@ function SpecialEpisodeChecker(){
 		SpecialEpiCheck1Load=$(
 			curl -sL "$SpecialEpiCheck1"
 		)
+		if [[ $SpecialEpiCheck1Load =~ 404 ]]; then
+			Fails="true"
+			SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-1"
+			SpecialEpiCheck1Load=$(
+				curl -sL "$SpecialEpiCheck1"
+			)
+		fi
 		SpecialEpiCheck2=$(
 			echo "$SpecialEpiCheck1Load" | \
 			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
@@ -473,7 +491,11 @@ function DownloadUtilityForRange(){
 		InfoFunc "Checking Episodes, Please Wait..."
 		QualityPicker="high"
 		for EpiCheck in $(seq "$EpiScrape2" "$EpiScrape3" | xargs); do
-			EPS="$SerNameFile-episode-$EpiCheck"
+			if [[ $Fails == "true" ]]; then
+				EPS="$SerNameFile-$EpiCheck"
+			else
+				EPS="$SerNameFile-episode-$EpiCheck"
+			fi
 			DetectNotFound=$(
 				curl -sL "$BASE_URL/videos/$EPS"
 			)
@@ -485,7 +507,11 @@ function DownloadUtilityForRange(){
 		ParseToHist "Download"
 # For Looping Arithmetic of Episodes
 		for ((i=EpiScrape2;i<=EpiScrape3;i++)); do
-			EPS="$SerNameFile-episode-$i"
+			if [[ $Fails == "true" ]]; then
+				EPS="$SerNameFile-$i"
+			else
+				EPS="$SerNameFile-episode-$i"
+			fi
 			LinkFor=$(
 				curl -sL "$BASE_URL/videos/$EPS" | \
 				sed -n '/<div class="play-video">/,/<\/div>/p' | \
@@ -504,7 +530,7 @@ function DownloadUtilityForRange(){
 					curl -sL "$LinkFor" | \
 					sed -n '/<div class="dowload">/,/<\/div>/p' | \
 					grep -o "https[^'\"<>]*" | \
-					grep -e 'loadfast1' -e 'gogo-cdn' | \
+					grep -e 'loadfast1' -e 'gogo-cdn' -e 'vidstreaming' | \
 					tac | \
 					xargs
 				)
@@ -523,6 +549,7 @@ function DownloadUtilityForRange(){
 						tr -dc '[:print:]'
 					)
 				else
+					LISTER=${LISTER//amp;/}
 					ConGrep=$(
 						curl -e "$LISTER" -LsI "$LISTER" | \
 						grep '[C|c]ontent-[L|l]ength' | \
@@ -579,7 +606,11 @@ function DownloadUtilityForRange(){
 		done
 	else
 		if [[ "$EpisodeSelected" =~ [M|m]ovie ]]; then
-			EPS="$SerNameFile-episode-1"
+			if [[ $Fails == "true" ]]; then
+				EPS="$SerNameFile-$i"
+			else
+				EPS="$SerNameFile-episode-$i"
+			fi
 			FILEVIDNAME="$SerNameFile-MOVIE.mp4"
 		else
 			if [[ $EpisodeSelected =~ .*[.].* ]]; then
@@ -587,7 +618,11 @@ function DownloadUtilityForRange(){
 				echo "$EpisodeSelected" | tr '.' '-'
 				)
 			fi
-			EPS="$SerNameFile-episode-$EpisodeSelected"
+			if [[ $Fails == "true" ]]; then
+				EPS="$SerNameFile-$EpisodeSelected"
+			else
+				EPS="$SerNameFile-episode-$EpisodeSelected"
+			fi
 			FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
 		fi
 		if [[ $WatchAnime == "1" ]]; then
@@ -650,7 +685,7 @@ function ServerGreppers(){
 				curl -sL "$LinkFor" | \
 				sed -n '/<div class="dowload">/,/<\/div>/p' | \
 				grep -o "https[^'\"<>]*" | \
-				grep -e 'loadfast1' -e 'gogo-cdn' | \
+				grep -e 'loadfast1' -e 'gogo-cdn' -e 'vidstreaming' | \
 				tac | \
 				xargs
 			)
@@ -813,6 +848,7 @@ function DownloaderOwn3(){
 # Default Server
 function DefaultQuality(){
 	MainDirectLinkDec=$*
+	MainDirectLinkDec="${MainDirectLinkDec//amp;/}"
 	if [[ -z "$MainDirectLinkDec" ]]; then
 		ErrorFunc3d "Server Not Found" >&2
 		exit 4
@@ -933,7 +969,7 @@ function Server1(){
 		tr -dc '[:print:]'
 	)
 	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright, Give it a try again" >&2
+		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
 		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
@@ -1017,7 +1053,7 @@ function Server1Ranging(){
 		tr -dc '[:print:]'
 	)
 	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright" >&2
+		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
 		exit 4
 	fi
 	DirectDownLinksList="$MainDirectL"
@@ -1080,7 +1116,7 @@ function Server2(){
 		tr -dc '[:print:]'
 	)
 	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright" >&2
+		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
 		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
@@ -1212,7 +1248,7 @@ function LowQuality(){
 		)
 	fi
 	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed or the File was Deleted due to DMCA Copyright, Try it Again." >&2
+		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
 		exit 4
 	fi
 	if [[ $MainDirectL =~ gogo-cdn ]]; then
@@ -1289,7 +1325,7 @@ function Server1Low(){
 		tr -dc '[:print:]'
 	)
 	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
+		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
 		exit 4
 	fi
 	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
@@ -1424,50 +1460,55 @@ function Server2Streamer(){
 
 function StreamGetLinkDefault(){
 	GetDATA=$(
-		curl -sL "$LinkFor" | \
-		grep '[M|m]ulti' | \
-		grep -o "https[^'\"<>]*"
+		curl -sL "$LinkForServer1" | \
+		sed -n '/<div class="dowload">/,/<\/div>/p' | \
+		grep -o "https[^'\"<>]*" | \
+		grep -e 'loadfast' -e 'gogo-cdn' -e 'vidstreaming' | \
+		tac | \
+		xargs
 	)
 	if [[ -z $GetDATA ]]; then 
 		ErrorFunc3d "Failed to get data" >&2
 		exit 4
 	fi
-	GetSTREAM=$(
-		curl -sL "$GetDATA" | \
-		grep 'sources' | \
-		grep -o "https[^'\"<>]*" | \
-		awk 'NR==1'
-	)
-	if [[ -z $GetSTREAM ]]; then 
-		ErrorFunc3d "Failed to get data" >&2
-		exit 4
-	fi
-	if ! [[ $GetSTREAM == *asiancdn* ]]; then
-		if [[ $QualityPicker =~ [H|h]igh ]]; then
-			GetSTREAMQual=$(
-				curl -sL "$GetSTREAM" -e "$BASE_URL" | \
-				grep -o '[0-9]*\.m3u8' | \
-				sed 's|.m3u8||g' | \
-				tac | \
-				xargs
+	for LISTER in $GetDATA; do
+		if [[ $LISTER =~ gogo-cdn ]]; then
+			ConGrep=$(
+				curl -e "$BASE_URL" -LsI "$LISTER" | \
+				grep '[C|c]ontent-[L|l]ength' | \
+				awk '{print $2}' | \
+				tr -dc '[:print:]'
 			)
-			for SQUAL in ${GetSTREAMQual}; do
-				ForChecks=$(
-					curl -sLIe "$BASE_URL" "${GetSTREAM//.m3u8/.$SQUAL.m3u8}" | \
-					grep 'HTTP'
-				)
-				if [[ "$ForChecks" =~ 200 ]]; then
-					QualitySTREAM="${GetSTREAM//.m3u8/.$SQUAL.m3u8}"
-					break
-				else
-					ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-				fi
-			done
-		elif [[ $QualityPicker =~ [L|l]ow ]]; then
-			QualitySTREAM="${GetSTREAM//.m3u8/.480.m3u8}"
+		elif [[ $LISTER =~ loadfast ]]; then
+			LISTER=${LISTER//amp;/}
+			ConGrep=$(
+				curl -LsI "$LISTER" | \
+				grep '[C|c]ontent-[L|l]ength' | \
+				awk '{print $2}' | \
+				tr -dc '[:print:]'
+			)
+			elif [[ $LISTER =~ vidstreaming ]]; then
+			LISTER=${LISTER//amp;/}
+			ConGrep=$(
+				curl -LsI "$LISTER" | \
+				grep '[C|c]ontent-[L|l]ength' | \
+				awk '{print $2}' | \
+				tr -dc '[:print:]'
+			)
 		fi
-	else
-		QualitySTREAM="$GetSTREAM"
+		if [[ -z "$ConGrep" ]]; then
+			ConGrep="1"
+		fi
+		if [[ "$ConGrep" -gt "225000" ]]; then
+			QualitySTREAM="$LISTER"
+			break
+		else
+			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
+		fi
+	done
+	if [[ -z "$QualitySTREAM" ]]; then
+		ErrorFunc5d "Server Failed to Fetch" >&2
+		exit 4
 	fi
 }
 
@@ -1624,13 +1665,69 @@ function ParseToHist(){
 	fi
 }
 
+function BacktoHist(){
+	unset infarg AnimeSearch EpisodeSelected QualityPicker
+	DispPickHist=$(
+		grep -E 'Download|Watch' "$HOME/.histemina" | \
+		uniq | \
+		tac
+	)
+	echo -e "$DispPickHist" | \
+	awk -F[#] '{print $1}' | \
+	while read -r wiffles; do
+		if [[ "${#wiffles}" -gt 47 ]]; then
+			echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
+		else 
+			echo "${wiffles}"
+		fi
+	done | \
+	nl -w1 -s"+ " | \
+	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+	read -rp "$(InputSign 'Enter a Number: ')" SelectedPick
+	while ! [[ $SelectedPick =~ [0-9]* ]]; do
+		ErrorFunc1a "The input must be in Digit/Number" >&2
+		read -rp "$(InputSign 'Enter a Number: ')" SelectedPick
+	done 
+	SelectedPickSeries=$(
+		echo "$DispPickHist" | \
+		sed -n "$SelectedPick"p
+	)
+	AnimeName=$(
+		echo "$SelectedPickSeries" | \
+		awk -F[#] '{print $1}'
+	)
+	Episoode=$(
+		echo "$SelectedPickSeries" | \
+		awk -F[#] '{print $2}'
+	)
+	Moode=$(
+		echo "$SelectedPickSeries" | \
+		awk -F[#] '{print $3}'
+	)
+	Quuality=$(
+		echo "$SelectedPickSeries" | \
+		awk -F[#] '{print $4}'
+	)
+	AnimeSearch="${AnimeName}"
+	EpisodeSelected="${Episoode}"
+	SeriesSelected="1"
+	if [[ $Moode == "Watch" ]]; then
+		WatchAnime="1"
+	fi
+	QualityPicker="${Quuality}"
+}
+
 
 #######################################
 #         Streaming Setups         #
 #######################################
 
 function CallWatchSequence(){
-	EPS="$SerNameFile-episode-$EpisodeSelected"
+	if [[ $Fails == "true" ]]; then
+		EPS="$SerNameFile-$EpisodeSelected"
+	else
+		EPS="$SerNameFile-episode-$EpisodeSelected"
+	fi
 	FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
 }
 
@@ -1663,22 +1760,27 @@ function WatchGetData(){
 	ParseToHist "Watch"
 	if [[ $VidPlayer == "mpv" ]]; then
 		if [[ $server == "default" ]]; then
-			refSet="gogoplay1.com"
+			refSet="gogoplay1.com" # Required Incase of Needed Headers
 		else
 			refSet="$QualitySTREAM"
 		fi
 		setsid -f mpv --http-header-fields="Referer: $refSet" "$QualitySTREAM" >/dev/null 2>&1
 	elif [[ $VidPlayer == "vlc" ]]; then
-		if ! [[ "$PATH" =~ /[V|v]ideoLAN/VLC ]]; then
-			ErrorFunc "You Need to add VLC file Directory in $\PATH Environment Variable"
-			exit 1
+		# ENV Variable change
+		if [[ -n "$(ls /mnt/c/'Program Files (x86)'/VideoLAN 2> /dev/null)" ]]; then
+			[[ ! "$PATH" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files (x86)/VideoLAN/VLC/vlc.exe"
+		elif [[ -n "$(ls /mnt/c/'Program Files'/VideoLAN 2> /dev/null)" ]]; then
+			[[ ! "$PATH" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files/VideoLAN/VLC/vlc.exe"
+		else
+			ErrorFunc4b 'Unable to Find VLC file Directory, Make Sure VLC is installed in "C:/Program Files" or in "C:/Program Files (x86)" directory'
+			exit 2
 		fi
 		if [[ $server == "default" ]]; then
-			refSet="gogoplay1.com"
+			refSet="gogoplay1.com" # Required Incase of Needed Headers
 		else
 			refSet="$QualitySTREAM"
 		fi
-		setsid -f vlc.exe --adaptive-use-access --http-referrer="$refSet" "$QualitySTREAM" >/dev/null 2>&1
+		setsid -f "$PATHVLC" --adaptive-use-access --http-referrer="$refSet" "$QualitySTREAM" >/dev/null 2>&1
 	else
 		ErrorFunc3b "Invalid Player" >&2
 		exit 2
@@ -1700,6 +1802,7 @@ function WatchAnime(){
 				fi
 			done
 		)
+		MainMenuMessage
 		echoterd "Now Playing: $AnimePlaying [$EpisodeSelected/$LastEpiList]"
 		NumberingFunc "1" "Next Episode"
 		NumberingFunc "2" "Back to Previous Episode"
@@ -1708,7 +1811,7 @@ function WatchAnime(){
 		NumberingFunc "5" "Download Instead"
 		NumberingFunc "6" "Exit the Program"
 		read -rp "$(InputSign 'Pick a Number: ')" PickedSelected
-		while [[ $PickedSelected -gt 6 ]]; do
+		while [[ $PickedSelected -gt 6 ]] || [[ $PickedSelected =~ [[:punct:]] ]]; do
 			ErrorFunc3a "Undefined Number Pick" >&2
 			read -rp "$(InputSign 'Pick a Number: ')" PickedSelected
 		done
@@ -1725,7 +1828,7 @@ function WatchAnime(){
 				continue
 				;;
 			4)
-				unset AnimeSearch SeriesSelected EpisodeSelected
+				unset AnimeSearch SeriesSelected EpisodeSelected Fails
 				OverAllInputs
 				continue
 				;;
@@ -1746,7 +1849,7 @@ function WatchAnime(){
 #######################################
 
 function ParseArgs(){
-	while getopts ":dwHDVhvi:s:e:q:m:t:p:" opt; do
+	while getopts ":dvbhVHDwi:s:e:q:m:t:p:" opt; do
 		case "${opt}" in
 			d)
 				if [[ $EUID -ne 0 ]]; then
@@ -1782,17 +1885,10 @@ function ParseArgs(){
 				;;
 			V)
 				VidPlayer="vlc"
-				# ENV Variable change
-				if [[ $VidPlayer == "vlc" ]]; then
-					if [[ -n "$(ls /mnt/c/'Program Files (x86)'/VideoLAN 2> /dev/null)" ]]; then
-						[[ ! "$PATH" =~ /VideoLAN/VLC ]]; export PATH="$PATH:/mnt/c/Program Files (x86)/VideoLAN/VLC"
-					elif [[ -n "$(ls /mnt/c/Program Files/VideoLAN 2> /dev/null)" ]]; then
-						[[ ! "$PATH" =~ /VideoLAN/VLC ]]; export PATH="$PATH:/mnt/c/Program Files/VideoLAN/VLC"
-					else
-						ErrorFunc 'Unable to Find VLC file Directory, Make Sure that VLC is installed in "C:/Program Files" or in "C:/Program Files (x86)" directory'
-						exit 1
-					fi
-				fi
+				;;
+			b)
+				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
+				BacktoHist # <- this function used for continue'ing to where you left on
 				;;
 			H)
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
@@ -1807,7 +1903,7 @@ function ParseArgs(){
 						else 
 							echo "${wiffles}"
 						fi
-					done < "$HOME/.histemina"
+					done <<< "$(tac "$HOME/.histemina")"
 				)
 				echo "History File" | CenteredGrid
 				echo "This is where all your Recent Searches/Downloads Stored" | CenteredGrid
@@ -1815,18 +1911,13 @@ function ParseArgs(){
 				exit 0
 				;;
 			D)
-				if [[ $EUID -ne 0 ]]; then
-					ErrorFunc1g 'Give this script Sudo Permission to Delete files' >&2
-					InfoFunc "Run: sudo $(basename "$0") -D"
-					exit 7
-				fi
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				sed -i '/^/d' "$HOME/.histemina"
 				exit 0
 				;;
 			v)
 				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				echo "v0.6.9 Beta (Currently on Beta Test, Improved Version)"
+				echo "v0.7 (Stable Release)"
 				exit 0
 				;;
 			m)
@@ -1968,7 +2059,7 @@ function ErrorHelp(){
 	echo -e "Program that allows you to download and watch anime via command line."
 	echo -e ''
 	echo -e "Options:"
-	echo -e "   -d\t\t\t\t: Uninstall Script with its Config Files"
+	echo -e "   -d\t\t\t\t: Uninstall Script with Config Files"
 	echo -e "   -v\t\t\t\t: Show the version of the script"
 	echo -e '   -m "[mode]"\t\t\t: Specify Mode'
 	echo -e '   -s "<search query>"\t\t: Search Anime'
@@ -1976,7 +2067,7 @@ function ErrorHelp(){
 	echo -e '   -q "[quality]"\t\t: Quality of Video'
 	echo -e '   -p "[number]"\t\t: Specify Picks in Anime Selection'
 	echo -e '   -t "[server]"\t\t: Specify Server (default, 1, 2, 3)'
-	echo -e "   -w\t\t\t\t: Switch to Watch Mode. Instead of Downloading, it will open the Episode for you using (MPV/VLC)"
+	echo -e "   -w\t\t\t\t: Switch to Watch Mode"
 	echo -e '   -V\t\t\t\t: Use VLC as Video Player (For Windows)'
 	echo -e "   -h\t\t\t\t: Show this help"
 	echo -e ''
@@ -1984,6 +2075,7 @@ function ErrorHelp(){
 	echo -e '   -i "<search query>"\t\t: Search Anime and Print Info'
 	echo -e '   -H\t\t\t\t: Print History File'
 	echo -e '   -D\t\t\t\t: Clear History File'
+	echo -e '   -b\t\t\t\t: Play Anime from History'
 	echo -e ''
 	printf 'You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && printf '/etc/emina/down.conf' && tput sgr 0
 	echo -e ''
@@ -1992,7 +2084,7 @@ function ErrorHelp(){
 	echo -e ''
 	echo 'Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..'
 	echo -e ''
-	echo 'Option "-m [dub]" will change Mode, (Default: None). Watch mode (MPV) is not tested yet, Stable Release Soon..'
+	echo 'Option "-m [dub]" will change Mode, (Default: None).'
 	echo -e "\tdub\t\t: Switch to Dub Mode (Dubbed Anime Only)"
 	echo -e ''
 	echo 'Option "-q" flag is ignored when downloading Range of Episodes (Default: High)'
