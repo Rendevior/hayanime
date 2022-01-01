@@ -91,7 +91,7 @@ Misc:
 
 + Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..
 
-+ Option "-m [dub]" will change Mode, (Default: None). Watch mode (MPV) is not tested yet, Stable Release Soon..
++ Option "-m [dub]" will change Mode, (Default: None).
     + dub                        : Switch to Dub Mode (Dubbed Anime Only)
 
 + Option "-q" flag is ignored when downloading Range of Episodes (Default: High)
