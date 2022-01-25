@@ -1,5 +1,6 @@
 PREFIX := /usr/local
 ALLF := /etc/emina
+RMRF := -rm -rf
 
 all: install
 
@@ -13,8 +14,9 @@ install: exist
 	cp files/emina.conf $(ALLF)/emina.conf
 	
 uninstall:
-	$(RM) $(DESTDIR)$(PREFIX)/sbin/emina-cli
-	$(RM) $(DESTDIR)$(ALLF)/eminavars
-	$(RM) $(DESTDIR)$(ALLF)/emina.conf
+	$(RM) $(PREFIX)/sbin/emina-cli
+	$(RM) $(ALLF)/eminavars
+	$(RM) $(ALLF)/emina.conf
+	$(RMRF) $(ALLF)
 
 .PHONY: all install uninstall
