@@ -1,5 +1,6 @@
 PREFIX := /data/data/com.termux/files/usr/bin
-ALLF := /data/data/com.termux/files/etc/emina
+ALLF := /data/data/com.termux/files/home/etc/emina
+RMRF := -rm -rf
 
 all: install
 
@@ -13,9 +14,9 @@ install: exist
 	cp files/emina.conf $(ALLF)/emina.conf
 
 uninstall:
-	$(RM) $(PREFIX)/emina-cli
 	$(RM) $(ALLF)/eminavars
 	$(RM) $(ALLF)/emina.conf
 	$(RM) $(PREFIX)/mpv-termux
+	$(RMRF) $(ALLF)
 
 .PHONY: all install uninstall
