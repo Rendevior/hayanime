@@ -72,8 +72,7 @@ function TimeTranslate(){
 }
 
 function show_help(){
-	echo -e 'Usage: emina-cli -i "<search query>"'
-	echo -e 'Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]'
+	echo -e 'Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" [--dub]'
 	echo -e 'Usage: emina-cli [arguments...]'
 	echo -e ''
 	echo -e "Program that allows you to download and watch anime via command line."
