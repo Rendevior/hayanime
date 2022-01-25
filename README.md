@@ -1,5 +1,5 @@
 <div align="center">
-<h1>Emina-Cli <sup><sub><sup>v1.0.0</sup></sub></sup></h1>
+<h1>Emina-Cli <sup><sub><sup>(termux)v1.0.0</sup></sub></sup></h1>
 
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
