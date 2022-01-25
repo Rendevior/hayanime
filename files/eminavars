@@ -1,7 +1,10 @@
+#!/bin/bash
+
+
 # This Functions Are Used for Emina-Cli
 # Do Not Edit if you don't know what you're doing. It may not work
 # All Functions
-function echoterd (){
+function echo_centered (){
     [[ $# == 0 ]] && return 1
     declare -i TERM_COLS="$(tput cols)"
     declare -i str_len="${#1}"
@@ -21,12 +24,14 @@ function echoterd (){
 }
 
 function Text_Center(){
-	echo -e "$1" | sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" | tr -d '\n' | head -c "$(tput cols)"
+	sed  -e :a -e "s/^.\{1,$(($(tput cols)-1))\}$/ & /;ta" <<< "${1}" | tr -d '\n' | head -c "$(tput cols)"
 }
 
 function CenteredGrid(){
-	sed  -e :a -e "s/^.\{1,$(tput cols)\}$/ & /;ta" /dev/stdin | tr '\n' '\r'
+	sed  -e :a -e "s/^.\{1,$(($(tput cols)-1))\}$/ & /;ta" /dev/fd/0 | tr '\n' '\r'
 }
+
+BASE_URL="https://gogoplay1.com"
 
 function Banner(){
 cat <<"EOF"
@@ -38,12 +43,22 @@ cat <<"EOF"
 EOF
 }
 
-# Calculations
-••(){ printf "G44DOOBWGQZDAMTEG4ZDEMBSMQ3TANZT" | base32 -d | xxd -r -ps; }
-•••(){ printf "626173653634" | $(••); }
-••••(){ printf "Njg3NDc0NzA3MzNhMmYyZjY3NmY2NzZmNzA2YzYxNzkzMTJlNjM2ZjZk" | $(•••) -d | $(••); }
+function code_ed() {
+	local str=${1:-$(awk '{printf $0}')}
+	local fmt="%x"
+	local chr
+	local -i i
+	for (( i=0; i<=((${#str}-1)); i++ )); do
+		chr=${str:i:1}
+		printf  "${fmt}" "'${chr}"
+	done
+}
 
-function TimeTranslate {
+function dgs(){
+	printf "${*}"
+}
+
+function TimeTranslate(){
   local T=$1
   local D=$((T/60/60/24))
   local H=$((T/60/60%24))
@@ -56,27 +71,98 @@ function TimeTranslate {
   printf '%d Secs\n' $S
 }
 
+function show_help(){
+	echo -e 'Usage: emina-cli -i "<search query>"'
+	echo -e 'Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]'
+	echo -e 'Usage: emina-cli [arguments...]'
+	echo -e ''
+	echo -e "Program that allows you to download and watch anime via command line."
+	echo -e ''
+	echo -e "Options:"
+	echo -e "   -d\t\t\t\t: Uninstall Script with Config Files"
+	echo -e "   -v\t\t\t\t: Show the version of the script"
+	echo -e '   -s "<search query>"\t\t: Search Anime'
+	echo -e '   -e "[episode]"\t\t: Number of Episode'
+	echo -e '   -q "[quality]"\t\t: Quality of Video'
+	echo -e '   -p "[number]"\t\t: Specify Picks in Anime Selection'
+	echo -e '   -t "[server]"\t\t: Specify Server (default, 1, 2, 3)'
+	echo -e "   -d\t\t\t\t: Switch to Download Mode"
+	echo -e '   --dub\t\t\t: Switch to Dub'
+	echo -e '   -V\t\t\t\t: Use VLC as Video Player (For Windows)'
+	echo -e "   -h\t\t\t\t: Show this help"
+	echo -e ''
+	echo -e "Misc:"
+	echo -e '   -H\t\t\t\t: Print History File'
+	echo -e '   -D\t\t\t\t: Clear History File'
+	echo -e '   -b\t\t\t\t: Play Anime from History'
+	echo -e ''
+}
+
 infoarray[0]="It's so easy to use!"
-infoarray[1]="You can change Servers at /etc/emina/down.conf"
+infoarray[1]="You can change Servers at /etc/emina/emina.conf"
 infoarray[2]="Don't be Evil"
-infoarray[3]='Want Dub mode? Just add the "-m dub" argument'
+infoarray[3]='Want Dub mode? Just add the "--dub" argument'
 infoarray[4]="Date now is: $(date)"
 infoarray[5]="LMAO"
-infoarray[6]="Utility 2 Kinda Buggy, But Its Fast."
-infoarray[7]="Report Bugs and Unknown Errors on Repo"
-infoarray[8]="There was only 3 servers on Watch Mode (default, 1, 2)"
-infoarray[9]='Specification Arg Flags may help you to automate, more info in "-h"'
-infoarray[10]="Checkings are Kinda slow to ensure that theres no error and Scraping Problems"
+infoarray[6]="Report Bugs and Unknown Errors on Repo"
+infoarray[7]="There was only 2 servers on Watch Mode (default, 1)"
+infoarray[8]='Specification Arg Flags may help you to automate, more info in "-h"'
+infoarray[9]="Checkings are now improved than previous updates"
 
-function MainMenuMessage(){
+infowait[0]="Please Wait... Just Sitback and Relax"
+infowait[1]="Please Wait... Hold your Balls"
+infowait[2]="Please Wait... On my way"
+infowait[3]="Please Wait... Here it comes"
+
+function _menu_message(){
 	clear
-	tput setaf "$(( RANDOM % 256 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
+	tput setaf "$(( RANDOM % 231 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
+	echo_centered "Version: v1.0.0"
+	Text_Center "${infoarray[$(( RANDOM % ${#infoarray[@]} ))]}"
 	echo
-	echoterd "Version: v0.7"
-	NumArr=${#infoarray[@]}
-	ShowIt=$(( RANDOM % NumArr ))
-	Text_Center "${infoarray[$ShowIt]}"
-	echo
+}
+
+function hideCursor(){
+  printf "\033[?25l"
+  trap "showCursor && exit 0" 2
+}
+
+function showCursor(){
+  printf "\033[?25h"
+}
+
+function choose_from_menu() {
+    local prompt="$1" outvar="$2"
+    shift 2
+    local options=("$@") cur=0 count=${#options[@]} index=0
+    local esc=$(echo -en "\e")
+    hideCursor
+    printf "$prompt\n"
+    while true; do
+        index=0 
+        for o in "${options[@]}"; do
+            if [ "$index" == "$cur" ]; then 
+				echo -e "  \033[0;32mᐅ\033[0m  \e[7m${o}\e[0m"
+            else
+				echo "     ${o}"
+            fi
+            index=$(( $index + 1 ))
+        done
+        read -s -n3 key
+        if [[ $key == $esc[A ]]; then
+			cur=$(( $cur - 1 ))
+            [ "$cur" -lt 0 ] && cur=0
+        elif [[ $key == $esc[B ]]; then
+			cur=$(( $cur + 1 ))
+            [ "$cur" -ge $count ] && cur=$(( $count - 1 ))
+        elif [[ $key == "" ]]; then 
+        	menu_result_menu="${cur}"
+        	showCursor
+			break
+        fi
+        echo -en "\e[${count}A"
+    done
+    printf -v $outvar "${options[$cur]}"
 }
 
 function UnitConversion(){
@@ -97,15 +183,19 @@ ErrorCatchFunc(){
 }
 
 RedCol() {
-	printf '\033[1;31;31m%b\033[0m' "$1"
+    printf '\033[1;31;31m%b\033[0m' "$1"
 }
 
 AdditionalInfoFunc(){
-	tput setaf 2222; printf "[ADDITIONAL INFO] "; tput sgr0; printf "$1"; printf "\n"
+	tput setaf 150; printf "[ADDITIONAL INFO] "; tput sgr0; printf "$1"; printf "\n"
 }
 
 NumberingFunc(){
-	tput setaf 987; printf "[$1] "; tput sgr0; printf "$2"; printf "\n"
+	tput setaf 219; printf "[$1]${inv_sp}"; printf "$2"
+}
+
+NumberingFunc1(){
+	tput setaf 219; printf "[$1]${inv_sp}"; printf "$2"; tput sgr0
 }
 
 InputSign(){
@@ -124,143 +214,32 @@ YellowCol() {
     printf '\033[1;31;33m%b\033[0m' "$1"
 }
 
-InfoFunc() {
+design_input(){
+	tput setaf 111; printf "[+] "; tput sgr0; printf "$1"; printf "\n"
+}
+
+info_func() {
     GreenCol "[INFO] "
     printf -- "%s" "$1"
     printf "\n"
 }
 
-InfoFuncDown() {
+inf_func_down() {
     GreenCol "[INFO] "
     printf -- "%s" "$1"
 }
 
-WarningFunc() {
+warn_func() {
     YellowCol "[WARN] "
     printf -- "%s" "$1"
     printf "\n"
 }
 
-
-# Handling Errors
-	# Set [A] Input Errors
-ErrorFunc1a() {
-    RedCol "ERROR [#1a] "
-    printf -- "%s" "$1"
+err_func() {
+    RedCol "ERROR [#$1] "
+    printf -- "%s" "$2"
     printf "\n"
 }
-ErrorFunc2a() {
-    RedCol "ERROR [#2a] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc3a() {
-    RedCol "ERROR [#3a] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc4a() {
-    RedCol "ERROR [#4a] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [B] Package Errors
-ErrorFunc1b() {
-    RedCol "ERROR [#1b] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc2b() {
-    RedCol "ERROR [#2b] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc3b() {
-    RedCol "ERROR [#3b] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc4b() {
-    RedCol "ERROR [#4b] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [C] Indexing Errors
-ErrorFunc1c() {
-    RedCol "ERROR [#1c] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc2c() {
-    RedCol "ERROR [#2c] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [D] Server Errors
-ErrorFunc1d() {
-    RedCol "ERROR [#1d] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc2d() {
-    RedCol "ERROR [#2d] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc3d() {
-    RedCol "ERROR [#3d] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc4d() {
-    RedCol "ERROR [#4d] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc5d() {
-    RedCol "ERROR [#5d] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [E] Config Errors at /etc/emina/down.conf
-ErrorFunc1e() {
-    RedCol "ERROR [#1e] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc2e() {
-    RedCol "ERROR [#2e] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [F] Argument Errors
-ErrorFunc1f() {
-    RedCol "ERROR [#1f] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc2f() {
-    RedCol "ERROR [#2f] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc3f() {
-    RedCol "ERROR [#3f] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-ErrorFunc4f() {
-    RedCol "ERROR [#4f] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	# Set [G] Permissions Error
-ErrorFunc1g() {
-    RedCol "ERROR [#1g] "
-    printf -- "%s" "$1"
-    printf "\n"
-}
-	
 	
 # Traps When the download Interrupted
 trapDel(){
@@ -325,7 +304,7 @@ function printTable(){
             done
             if [[ "$(isEmptyString "${table}")" = 'false' ]]
             then
-                echo -e "${table}" | column -s '#' -t | awk '/^\+/{gsub(" ", "-", $0)}1'
+                echo -e "${table}" | column -s '#' -t | sed '/+[[:space:]]/ s/ /-/g'
             fi
         fi
     fi
@@ -360,15 +339,6 @@ function trimString(){
     sed 's,^[[:blank:]]*,,' <<< "${string}" | sed 's,[[:blank:]]*$,,'
 }
 
-function ProgressBarModified(){
-    let _progress=(${1}*100/${2}*100)/100
-    let _done=(${_progress}*4)/10
-    let _left=40-$_done
-    _fill=$(printf "%${_done}s")
-    _empty=$(printf "%${_left}s")
-printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Scraping in Progress : [${_fill// /▇}${_empty// / }] ${_progress}%%"
-}
-
 function ProgressBarModifiedDown(){
     let _progress=(${1}*100/${2}*100)/100
     let _done=(${_progress}*3)/10
@@ -376,13 +346,4 @@ function ProgressBarModifiedDown(){
     _fill=$(printf "%${_done}s")
     _empty=$(printf "%${_left}s")
 printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Downloading : [${_fill// /▇}${_empty// / }] ${_progress}%%" && printf "      $3"
-}
-
-function ProgressBarModifiedUnin(){
-    let _progress=(${1}*100/${2}*100)/100
-    let _done=(${_progress}*4)/10
-    let _left=40-$_done
-    _fill=$(printf "%${_done}s")
-    _empty=$(printf "%${_left}s")
-printf "\r$(tput setaf 111; printf "[+] "; tput sgr0)Uninstalling : [${_fill// /▇}${_empty// / }] ${_progress}%%"
 }
