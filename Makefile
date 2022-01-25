@@ -8,13 +8,14 @@ exist:
 
 install: exist
 	cp emina-termux $(PREFIX)/emina-termux
-	chmod 0755 $(PREFIX)/sbin/emina-termux
+	chmod 0755 $(PREFIX)/emina-termux
 	cp files/eminavars $(ALLF)/eminavars
 	cp files/emina.conf $(ALLF)/emina.conf
 
 uninstall:
-	$(RM) $(PREFIX)/sbin/emina-cli
+	$(RM) $(PREFIX)/emina-cli
 	$(RM) $(ALLF)/eminavars
 	$(RM) $(ALLF)/emina.conf
+	$(RM) $(PREFIX)/mpv-termux
 
 .PHONY: all install uninstall
