@@ -28,9 +28,8 @@ Now Install it
 ## Usage
 Its Simple..
 ```
-Usage: emina-cli -i "<search query>"
-Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" [--dub]
-Usage: emina-cli [arguments...]
+Usage: emina-termux -s "<search query>" -e "[Episode]" -q "High" [--dub]
+Usage: emina-termux [arguments...]
 ```
 + Inputs
 
@@ -49,12 +48,12 @@ Usage: emina-cli [arguments...]
 ```
 Options:
    -v                          : Show the version of the script
-   -m "[mode]"                 : Specify Mode
    -s "<search query>"         : Search Anime
    -e "[episode]"              : Number of Episode
    -q "[quality]"              : Quality of Video
    -p "[number]"               : Specify Picks in Anime Selection
    -t "[server]"               : Specify Server (default, 1)
+   --dub                       : Switch to Dub Mode
    -d                          : Switch to Download Mode
    -h                          : Show this help
 
