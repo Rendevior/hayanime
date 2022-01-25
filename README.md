@@ -17,7 +17,7 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 Install Dependencies needed
 ```
 apt update -y
-apt install aria2 bc mpv -y
+apt install aria2 bc mpv coreutils make -y
 ```
 
 Now Install it
@@ -58,7 +58,6 @@ Options:
    -p "[number]"               : Specify Picks in Anime Selection
    -t "[server]"               : Specify Server (default, 1)
    -d                          : Switch to Download Mode
-   -V                          : Use VLC as Video Player (For Windows)
    -h                          : Show this help
 
 Misc:
@@ -80,7 +79,7 @@ Misc:
 ## Features
 + You can Change Servers and Other Automations to make your Life Easier
 ```
-~# nano /etc/emina/down.conf
+~# nano /data/data/com.termux/files/etc/emina/down.conf
 ```
 
 | Variable | Posible Values |
