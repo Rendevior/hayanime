@@ -50,13 +50,13 @@ Usage: emina-cli [arguments...]
 ```
 Options:
    -v                          : Show the version of the script
-   -m "[mode]"                 : Specify Mode
    -s "<search query>"         : Search Anime
    -e "[episode]"              : Number of Episode
    -q "[quality]"              : Quality of Video
    -p "[number]"               : Specify Picks in Anime Selection
    -t "[server]"               : Specify Server (default, 1)
    -d                          : Switch to Download Mode
+   --dub.                      : Switch to Dub Mode
    -V                          : Use VLC as Video Player (For Windows)
    -h                          : Show this help
 
