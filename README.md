@@ -1,5 +1,5 @@
 <div align="center">
-<h1>Emina-Cli <sup><sub><sup>(termux)v1.0.0</sup></sub></sup></h1>
+<h1>Emina-Cli <sup><sub><sup>(termux) v1.0.0</sup></sub></sup></h1>
 
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
@@ -16,12 +16,12 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 Install Dependencies needed
 ```
 apt update -y
-apt install aria2 bc mpv coreutils make -y
+apt install aria2 bc coreutils make ncurses-utils -y
 ```
 
 Now Install it
 ```
-~# git clone https://github.com/TheGlockMisc/emina-cli.git
+~# git clone -b emina-termux https://github.com/TheGlockMisc/emina-cli.git
 ~# cd emina-cli
 ~# sudo make
 ```
@@ -29,15 +29,15 @@ Now Install it
 Its Simple..
 ```
 Usage: emina-cli -i "<search query>"
-Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]
+Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" [--dub]
 Usage: emina-cli [arguments...]
 ```
 + Inputs
 
 | Inputs | Posible Values |
 | ------------- | ---------- |
-| Episode | All Episodes Possible, Special Episodes (Ex. 6.5), movie |
-| Quality | high (Leave it Blank), low |
+| Episode | All Episodes Possible, Special Episodes (Ex. 6.5) |
+| Quality | high, normal, low |
 
 ## Prerequisites 
 + *Grep*
@@ -83,7 +83,7 @@ Misc:
 | Variable | Posible Values |
 | ------------- | ---------- |
 | Server | default, 1 |
-| Video Player | mpv, vlc |
+| Video Player | mpv, others |
 | Default Quality | high , low |
 | Download Mode | 1 |
 
