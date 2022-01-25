@@ -88,7 +88,6 @@ function show_help(){
 	echo -e '   -t "[server]"\t\t: Specify Server (default, 1, 2, 3)'
 	echo -e "   -d\t\t\t\t: Switch to Download Mode"
 	echo -e '   --dub\t\t\t: Switch to Dub'
-	echo -e '   -V\t\t\t\t: Use VLC as Video Player (For Windows)'
 	echo -e "   -h\t\t\t\t: Show this help"
 	echo -e ''
 	echo -e "Misc:"
