@@ -8,7 +8,7 @@ exist:
 
 install: exist
 	cp emina-cli $(DESTDIR)$(PREFIX)/sbin/emina-cli
-	chmod 0777 $(DESTDIR)$(PREFIX)/sbin/emina-cli
+	chmod 0755 $(DESTDIR)$(PREFIX)/sbin/emina-cli
 	cp files/eminavars $(DESTDIR)$(ALLF)/eminavars
 	cp files/down.conf $(DESTDIR)$(ALLF)/down.conf
 	
