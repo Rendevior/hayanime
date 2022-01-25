@@ -1,2049 +1,631 @@
 #!/bin/bash
-#
-# Emina-Cli is a Free OpenSource Anime Downloader for Linux
-# 
-#                    Version: v0.7 (Stable Release)
-#                        Statistics:
-#                     Total Words: 6689
-#                  Total Character: 50967
-#                     Total Lines: 1927
-# 
-#   Dependencies: coreutils(bc, wc, xxd), axel, aria2c, mawk
-#
-#  The Prerequisites Download Automation is only for Debian Based and Red Hat Based Distros
-#
 
-# Variables and Regexes
-REGNUMBERONLY="^([M|m]ovie|[0-9][0-9]*)+$"
-NOPUNCTUATIONS='['!'@#\$%^\&*()_€£¥₩÷×~`¡¿<>%+{}]'
-RANGEREGNUMBONLY="^([M|m]ovie|[0-9]*-[0-9]*|[0-9]*|[0-9]*.[0-9])$"
-HHSS="^[1-3]$|[D|d]efault"
-PermsInst="sudo"
+# Default Options
+is_range="0"
 
-# Is to install the Configs and Variables Stored in "/etc/emina" directory
-function StallConfigs(){
-	if ! [ -x "$(command -v curl)" ]; then
-		echo "Install curl first to continue"
+# For Checking Packages
+function check_package(){
+	for checking in "${@}"; do
+		if [[ -z "$(command -v "${checking}")" ]]; then
+			echo "[ERROR #1a] Package ${checking} is not installed. Please Install it before running this script." >&2
+			exit 1
+		fi
+	done
+	unset checking
+}
+
+function check_configs(){
+	if ! [[ -f "/usr/local/sbin/$(basename "$0")" ]]; then
+		echo '[ERROR #1a] This must be run via /usr/local/sbin directory, Please do "sudo make"'
+		exit 1
+	elif ! [[ -f /etc/emina/eminavars ]]; then
+		echo '[ERROR #1a] Variable file not found'
+		exit 1
+	elif ! [[ -f /etc/emina/emina.conf ]]; then
+		echo '[ERROR #1a] Config file not found'
 		exit 1
 	fi
-	if [ -f /etc/emina/down.conf ]; then
-		source /etc/emina/down.conf
-	else
-		${PermsInst} mkdir -p /etc/emina
-		${PermsInst} curl -sL "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/down.conf" -o /etc/emina/down.conf
-		source /etc/emina/down.conf
-	fi
-	if [ -f /etc/emina/eminavars ]; then
-		source /etc/emina/eminavars
-else
-		${PermsInst} curl -sL "https://raw.githubusercontent.com/TheGlockMisc/emina-cli/main/files/eminavars" -o /etc/emina/eminavars
-		source /etc/emina/eminavars
-	fi
-	BASE_URL="$(••••)"
-	if ! [[ -e /etc/emina/.cache ]]; then
-		touch /etc/emina/.cache >/dev/null 2>&1
-	fi
-	if ! [ -f "/usr/local/sbin/$(basename "$0")" ]; then
-		FileDir="$(dirname "$(readlink -f "$0")")/$(basename "$0")"
-		${PermsInst} cp "$FileDir" "/usr/local/sbin/$(basename "$0")"
-		${PermsInst} chmod 755 "/usr/local/sbin/$(basename "$0")"
-		${PermsInst} chmod -R 775 "/etc/emina"
-		${PermsInst} rm "$FileDir"
-		InfoFunc "The File was Moved!! You Can Execute it in any Directory"
-		InfoFunc "Run: $(basename "$0")"
-		exit 0
-	fi
-	if ! [ -f "$HOME/.histemina" ]; then
-		touch "$HOME/.histemina"
-		chmod 775 "$HOME/.histemina"
-	fi
+	source /etc/emina/eminavars
+	source /etc/emina/emina.conf
 }
 
-# Automated Install Packages and Checks (For Debian and RedHat Based Distros Only)
-function InstallPrerequisitesDebBased(){
-# If the machine was not Updated/Upgraded in a Month
-	if [[ -f "/var/lib/apt/periodic/update-success-stamp" ]]; then
-		LAST_UPDATED=$(stat --format="%X" /var/lib/apt/periodic/update-success-stamp)
-		UNIX_TIME=$(date +%s)
-		TIME_DIFF=$(( UNIX_TIME - LAST_UPDATED ))
-		if [[ "${TIME_DIFF}" -gt 2629746 ]]; then
-			${PermsInst} apt-get update -y
-			${PermsInst} apt-get upgrade -y
-		fi
-	else
-		${PermsInst} apt-get update -y
-		${PermsInst} apt-get upgrade -y
+function main_inputs(){
+	_menu_message
+	if [[ ${search_request} = "" ]]; then
+		read -rp "$(design_input 'Search Anime: ')" search_request
 	fi
-	for packages in sed awk grep bc curl mawk axel; do
-		if ! [ -x "$(command -v $packages)" ]; then
-			yes | ${PermsInst} apt-get install $packages
-			clear
+	while true; do
+		if [[ ${search_request} = "" ]]; then
+			err_func "1b" "You typed Nothing, CTRL + C to Exit" >&2
+			unset search_request
+			read -rp "$(design_input 'Search Anime: ')" search_request
+		else
+			search_request=$(echo "${search_request}" | tr '[:upper:]' '[:lower:]')
+			break
 		fi
 	done
-# For Colored Text
-	if ! [ -x "$(command -v tput)" ]; then
-		yes | ${PermsInst} apt-get install libncurses5-dbg
+	search_declare "${search_request}"
+	if [[ ${search_selected} == "" ]]; then
+		display_series "$query_results"
+		read -rp "$(design_input 'Pick a Number: ')" search_selected
 	fi
-	if [ -z "$(command -v base64; command -v base32)" ]; then
-		yes | ${PermsInst} apt-get install binutils
-	fi
-# Install the Best Downloading Utility in Linux
-	if ! [ -x "$(command -v aria2c)" ]; then
-   	 	yes | ${PermsInst} apt-get install aria2
-	fi
-# Revised Checks if theres error escapes from the conditions
-	PackageChecks
-}
-
-function PackageChecks(){
-	for check in tput aria2c awk grep sed curl bc xxd axel mawk wc base64 base32; do
-		if [[ -z "$(command -v $check)" ]]; then
-			ErrorFunc1b "Package $check is not installed. Please Install it before running this script." >&2
-			exit 2
+	while true; do
+		if ! [[ "${search_selected}" =~ [0-9]* ]]; then
+			err_func "2b" "Series Selected Mustn't have Punctuations Marks" >&2
+			unset search_selected
+			read -rp "$(design_input 'Pick a Number: ')" search_selected
+		elif [[ ${search_selected} = "" ]]; then
+			err_func "1b" "You typed Nothing, CTRL + C to Exit" >&2
+			unset search_selected
+			read -rp "$(design_input 'Pick a Number: ')" search_selected
+		elif [[ ${search_selected} -gt ${query_count} ]] || [[ ${search_selected} =~ ^0$ ]]; then
+			err_func "3b" "Out of range, between (1-${query_count}) only" >&2
+			unset search_selected
+			read -rp "$(design_input 'Pick a Number: ')" search_selected
+		else
+			break
 		fi
 	done
+	get_url_series "${search_selected}"
+	check_special_epi "${series_baseorigin}"
+	if [[ ${epside_selected} = "" ]]; then
+		read -rp "$(design_input "Episode [${old_episode}-${latest_episode}]: ")" epside_selected
+	fi
+	while true; do
+		if ! [[ ${epside_selected} =~ [0-9]* ]]; then
+			err_func "2b" "Series Selected Mustn't have Punctuations Marks" >&2
+			unset epside_selected
+			read -rp "$(design_input "Episode [${old_episode}-${latest_episode}]: ")" epside_selected
+		fi
+		if [[ ${epside_selected} =~ [0-9]*\.[0-9]*$ ]]; then
+			epside_selected_repl="${epside_selected//.[0-9]*/}"
+			if [[ ${epside_selected_repl} -gt ${latest_episode} ]]; then
+				err_func "3b" "Out of range (${old_episode}-${latest_episode}) Episode only" >&2
+				unset epside_selected epside_selected_repl
+				read -rp "$(design_input "Episode [${old_episode}-${latest_episode}]: ")" epside_selected
+			fi
+		else
+			if [[ ${epside_selected} -gt ${latest_episode} ]]; then
+				err_func "3b" "Out of range (${old_episode}-${latest_episode}) Episode only" >&2
+				unset epside_selected
+				read -rp "$(design_input "Episode [${old_episode}-${latest_episode}]: ")" epside_selected
+			fi
+		fi
+		if [[ ${epside_selected} = "" ]]; then
+			err_func "1b" "You Entered Nothing" >&2
+			unset epside_selected
+			read -rp "$(design_input "Episode [${old_episode}-${latest_episode}]: ")" epside_selected
+		else
+			break
+		fi
+	done
+	if ! [[ ${epside_selected} =~ - ]]; then
+		if [[ ${quality_picker} = "" ]]; then
+			read -rp "$(design_input 'Quality [Default: High]: ')" -e -i "${def_qual}" quality_picker
+		fi
+	else
+		is_range="1"
+	fi
+	info_func "Please Wait... I'm doing my Job"
 }
 
-function InstallPrerequisitesRedHatBased(){
-	if [[ -x $(command -v dnf) ]]; then
-		dmnerger="yum"
-	elif [[ -x $(command -v yum) ]]; then
-		dmnerger="dnf"
+function load_index_result(){ index_search_result="$(curl -sL "${BASE_URL}/search.html?keyword=${1}")"; }
+
+function search_declare(){
+    search_request=$(echo "${1}" | tr "[:space:]" "+")
+	load_index_result "${search_request}"
+	if [[ ${dub_mode} == "1" ]]; then
+		query_results=$(
+			sed -n '/<div class="name">/,/./p' <<< "${index_search_result}" | \
+			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[d|D]ub/!d' | uniq)
 	else
-		ErrorFunc1b "DNF/YUM not found"
+		query_results=$(
+			sed -n '/<div class="name">/,/./p' <<< "${index_search_result}" | \
+			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[d|D]ub/d' | uniq)
+	fi
+    if [[ $query_results = "" ]]; then
+		err_func "b1" "Seems Like No Anime Exist Based on Your Search, Try Again" >&2
+		sleep 1.5
+		unset search_request search_selected quality_picker epside_selected
+		main_inputs
+	fi
+	query_count=$(grep $'\n' -c <<< "$query_results")
+}
+
+function display_series(){
+	while read -r wiffles; do
+		[[ "${#wiffles}" -gt 47 ]] && echo "${wiffles:0:47}..${wiffles:(-10)}" || echo "${wiffles}"
+	done <<< "${1}" | nl -w1 -s"+ " | \
+	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+}
+
+function get_url_series(){
+    if [[ ${dub_mode} == "1" ]]; then
+		series_main_baseurl=$(
+			sed -n '/<li class="video-block ">/,/<\/li>/p' <<< "${index_search_result}" | \
+			grep -o "/videos/[^'\"<>]*" | sed '/[d|D]ub/!d' | sed -n "${1}"p | \
+			sed "s|^|${BASE_URL}|g;s|-episode-[0-9].*||g;s|-[0-9]*$||g")
+	else
+		series_main_baseurl=$(
+			sed -n '/<li class="video-block ">/,/<\/li>/p' <<< "${index_search_result}" | \
+			grep -o "/videos/[^'\"<>]*" | sed '/[d|D]ub/d' | sed -n "${1}"p | \
+			sed "s|^|${BASE_URL}|g;s|-episode-[0-9].*||g;s|-[0-9]*$||g")
+	fi
+	series_baseorigin=$(awk -F[/] '{print $5}' <<< "${series_main_baseurl}")
+}
+
+function check_special_epi(){
+	special_epi_url="${BASE_URL}/videos/${1}-episode-1"
+	special_epi_index=$(curl -sL "$special_epi_url")
+	if [[ "${special_epi_index}" == "404" ]]; then
+		echo "Error 404"
+		exit 1
+	fi
+	special_epi_print=$(
+		sed -n '/<ul class="listing items lists">/,/<\/ul>/p' <<< "${special_epi_index}" | \
+		sed 's|^ *||g' | sed '/^.*>/d' | grep -o '[0-9]*\.[0-9]' | xargs)
+	if [[ -n "${special_epi_print}" ]]; then
+		info_func "This Series Have Special Episodes"
+		for SpecialEpi in ${special_epi_print}; do
+			echo "Episode: ${SpecialEpi}"
+		done
+		unset SpecialEpi
+	fi
+	get_number_epi="$(
+		sed -n '/<ul class="listing items lists">/,/<\/ul>/p' <<< "$special_epi_index" | \
+		sed -n '/<div class="name">/,/<\/div>/p' | sed 's|^ *||g' | sed '/^.*>/d' | \
+		sort -V | grep -o 'Episode [0-9]*.[0-9]*' | sed 's|Episode ||g')"
+	old_episode=$(echo "$get_number_epi" | tr -d " " | head -1)
+	latest_episode=$(echo "$get_number_epi" | tr -d " " | tail -1)
+	if [[ ${latest_episode} = "0" ]]; then
+		err_func "1b" " Theres no episode found on this series"
 		exit 2
 	fi
-	if ! [[ -e /etc/emina/.cache ]]; then
-		${PermsInst} ${dmnerger} update -y
-		${PermsInst} ${dmnerger} upgrade -y
-		${PermsInst} ${dmnerger} install epel-release -y
-		${PermsInst} ${dmnerger} install coreutils -y
-		${PermsInst} ${dmnerger} install binutils -y
-		if [[ -x "$(command -v snap)" ]]; then
-			${PermsInst} ${dmnerger} install snapd -y
-			${PermsInst} systemctl enable --now snapd.socket
-			${PermsInst} ln -s /var/lib/snapd/snap /snap
-			tset
-		fi
-		for packages in sed grep nano curl bc mawk; do
-			if ! [ -x "$(command -v $packages)" ]; then
-				${PermsInst} ${dmnerger} install $packages -y
-				clear
-			fi
-		done
-		if ! [ -x "$(command -v xxd)" ]; then
-			${PermsInst} ${dmnerger} install vim-common -y
-			clear
-		fi
-		if ! [ -x "$(command -v aria2c)" ]; then
-			${PermsInst} ${dmnerger} install aria2 -y
-			clear
-		fi
-		if ! [ -x "$(command -v axel)" ]; then
-				${PermsInst} snap install axel
-				clear
-		fi
-	fi
-	PackageChecks
 }
 
-# Collect All Needed Data to Download
-function OverAllInputs(){
-	MainMenuMessage
-	if [[ $AnimeSearch = "" ]]; then
-		read -rp "$(InputSign 'Search Anime: ')" AnimeSearch
-	fi
-	while true; do
-		if [[ $AnimeSearch = "" ]]; then
-			ErrorFunc1a "You typed Nothing, CTRL + C to Exit" >&2
-			sleep 2
-			unset AnimeSearch
-			read -rp "$(InputSign 'Search Anime: ')" AnimeSearch
+function craft_url(){
+	if [[ "${1}" =~ [0-9]*\.[0-9]*$ ]]; then
+		crafted_subepi=${1//./$'\n'}
+		start_subepi=$(head -n 1 <<< "${crafted_subepi}")
+		end_subepi=$(tail -n 1 <<< "${crafted_subepi}")
+		crafted_url_page="${BASE_URL}/videos/${series_baseorigin}-episode-${start_subepi}-${end_subepi}"
+		if [[ ${dub_mode} == "1" ]]; then
+			FILEVIDNAME="${series_baseorigin}-EPI${start_subepi}.${end_subepi}-DUB.mp4"
 		else
-			AnimeSearch=$(
-				echo "$AnimeSearch" | \
-				tr '[:upper:]' '[:lower:]'
-			)
-			break
+			FILEVIDNAME="${series_baseorigin}-EPI${start_subepi}.${end_subepi}.mp4"
 		fi
-	done
-	SearchForAnime
-	if [[ $SeriesSelected == "" ]]; then
-		SeriesSelector
-		read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-	fi
-	while true; do
-		if [[ $SeriesSelected =~ $NOPUNCTUATIONS ]]; then
-			ErrorFunc2a "Series Selected Mustn't have Punctuations Marks" >&2
-			sleep 2
-			unset SeriesSelected
-			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-		elif [[ $SeriesSelected = "" ]]; then
-			ErrorFunc1a "You Entered Nothing" >&2
-			sleep 2
-			unset SeriesSelected
-			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-		elif [[ ! $SeriesSelected =~ $REGNUMBERONLY ]]; then
-			ErrorFunc3a 'Number Only Allowed' >&2
-			sleep 2
-			unset SeriesSelected
-			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-		elif [[ $SeriesSelected =~ ^0$ ]]; then
-			ErrorFunc3a 'Illegal Option' >&2
-			sleep 2
-			unset SeriesSelected
-			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-		elif [[ $SeriesSelected -gt $QueryCount ]]; then
-			ErrorFunc4a "Out of range, between (1-$QueryCount) only" >&2
-			sleep 2
-			unset SeriesSelected
-			read -rp "$(InputSign 'Pick a Number: ')" SeriesSelected
-		else
-			break
-		fi
-	done
-    SeriesSelectorPrt2
-    SpecialEpisodeChecker
-    if [[ $EpisodeSelected = "" ]]; then
-		read -rp "$(InputSign "Episode [$LeastEpiList-$LastEpiList]: ")" EpisodeSelected
-	fi
-	while true; do
-		if [[ ! $EpisodeSelected =~ $RANGEREGNUMBONLY ]]; then
-			ErrorFunc3a 'Number Only Allowed' >&2
-			sleep 2
-			unset EpisodeSelected
-			read -rp "$(InputSign "Episode [$LeastEpiList-$LastEpiList]: ")" EpisodeSelected
-		fi
-		if [[ $EpisodeSelected =~ .[0-9]*$ ]]; then
-			EpisodeSelectedRepl="${EpisodeSelected//.[0-9]*/}"
-			if [[ $EpisodeSelectedRepl -gt $LastEpiList ]]; then
-				ErrorFunc4a "Out of range ($LeastEpiList-$LastEpiList) Episode only" >&2
-				sleep 2
-				unset EpisodeSelected EpisodeSelectedRepl
-				read -rp "$(InputSign "Episode [$LeastEpiList-$LastEpiList]: ")" EpisodeSelected
-			fi
-		else
-			if [[ $EpisodeSelected -gt $LastEpiList ]]; then
-				ErrorFunc4a "Out of range ($LeastEpiList-$LastEpiList) Episode only" >&2
-				sleep 2
-				unset EpisodeSelected
-				read -rp "$(InputSign "Episode [$LeastEpiList-$LastEpiList]: ")" EpisodeSelected
-			fi
-		fi
-		if [[ $EpisodeSelected = "" ]]; then
-			ErrorFunc1a "You Entered Nothing" >&2
-			sleep 2
-			unset EpisodeSelected
-			read -rp "$(InputSign "Episode [$LeastEpiList-$LastEpiList]: ")" EpisodeSelected
-		else
-			break
-		fi
-	done
-	if ! [[ $QualityPicker =~ - ]]; then
-		if [[ $QualityPicker = "" ]]; then
-			read -rp "$(InputSign 'Quality [Default: High]: ')" -e -i "$DefQual" QualityPicker
-		fi
-	fi
-	InfoFunc "Please Wait... I'm doing my Job"
-}
-
-# Reduced CURL Requests to Optimize Loadings
-# With Quotes to Validate all the Lines not Truncated in One line
-function SearchPageLoad(){
-	SearchPages="$(
-		{
-			curl -sL "$BASE_URL/search.html?keyword=$AnimeSearch"
-			curl -sL "$BASE_URL/search.html?keyword=$AnimeSearch&page=2"
-		}
-	)"
-}
-
-# Search Anime Function and Pass to Series Selection Function
-function SearchForAnime(){
-# Convert Spaces into Plus Sign
-    AnimeSearch=$(
-		echo "$AnimeSearch" | \
-		tr "[:space:]" "+"
-	)
-	SearchPageLoad
-# Scrapes to Check is Available First
-	if [[ $DUBMODE == "1" ]]; then
-		QueryDetect=$(
-			echo -e "$SearchPages" | \
-			sed -n '/<div class="name">/,/<\/div>/p' | \
-			sed 's/^ *//g' | \
-			sed '/^<div.*/d' | \
-			sed '/^<\/.*>/d' | \
-			sed 's| Episode.*[0-9]*||g' | \
-			awk '/[d|D]ub/' | \
-			uniq
-		)
 	else
-		QueryDetect=$(
-			echo -e "$SearchPages" | \
-			sed -n '/<div class="name">/,/<\/div>/p' | \
-			sed 's/^ *//g' | \
-			sed '/^<div.*/d' | \
-			sed '/^<\/.*>/d' | \
-			sed 's| Episode.*[0-9]*||g' | \
-			sed '/[d|D]ub/d' | \
-			uniq
-		)
-	fi
-    if [[ $QueryDetect = "" ]]; then
-		ErrorFunc1c "Seems Like No Anime Exist Based on Your Search, Try Again" >&2
-		sleep 2
-		unset AnimeSearch EpisodeSelected QualityPicker
-		OverAllInputs
-	fi
-	QueryCount=$(
-		echo "$QueryDetect" | \
-		wc -l
-	)
-}
-
-# Dub Mode Conditions
-# Displays the Possible Anime in Existing Based on Search
-function SeriesSelector(){
-	if [[ $DUBMODE == "1" ]]; then
-		echo -e "$SearchPages" | \
-		sed -n '/<div class="name">/,/<\/div>/p' | \
-		sed 's/^ *//g' | \
-		sed '/^<div.*/d' | \
-		sed '/^<\/.*>/d' | \
-		sed 's| Episode.*[0-9]*||g' | \
-		awk '/[d|D]ub/' | \
-		uniq | \
-		while read -r wiffles; do
-			if [[ "${#wiffles}" -gt 47 ]]; then
-				echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
-			else 
-				echo "${wiffles}"
-			fi
-		done | \
-		nl -w1 -s"+ " | \
-		printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
-	else
-		echo -e "$SearchPages" | \
-		sed -n '/<div class="name">/,/<\/div>/p' | \
-		sed 's/^ *//g' | \
-		sed '/^<div.*/d' | \
-		sed '/^<\/.*>/d' | \
-		sed 's| Episode.*[0-9]*||g' | \
-		sed '/[d|D]ub/d' | \
-		uniq | \
-		while read -r wiffles; do
-			if [[ "${#wiffles}" -gt 47 ]]; then
-				echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
-			else 
-				echo "${wiffles}"
-			fi
-		done | \
-		nl -w1 -s"+ " | \
-		printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
-	fi
-}
-
-# An Seperate Function For Getting URL indexes
-function SeriesSelectorPrt2(){
-    if [[ $DUBMODE == "1" ]]; then
-		SeriesLinkPicked=$(
-			echo -e "$SearchPages" | \
-			sed -n '/<li class="video-block ">/,/<\/li>/p' | \
-			grep -o "/videos/[^'\"<>]*" | \
-			awk '/[d|D]ub/' | \
-			sed -n "$SeriesSelected"p | \
-			sed "s|/videos|$BASE_URL/videos|g" | \
-			sed 's|-episode-[0-9].*||g;s|-[0-9]*$||g'
-		)
-	else
-		SeriesLinkPicked=$(
-			echo -e "$SearchPages" | \
-			sed -n '/<li class="video-block ">/,/<\/li>/p' | \
-			grep -o "/videos/[^'\"<>]*" | \
-			sed '/[d|D]ub/d' | \
-			sed -n "$SeriesSelected"p | \
-			sed "s|/videos|$BASE_URL/videos|g" | \
-			sed 's|-episode-[0-9].*||g;s|-[0-9]*$||g'
-		)
-	fi
-	SerNameFile=$(
-		echo "$SeriesLinkPicked" | \
-		awk -F[/] '{print $5}'
-	)
-}
-
-# Basically an Special Episode Checker ie. 6.5, 7.5
-function SpecialEpisodeChecker(){
-	if [[ $DUBMODE == "1" ]]; then
-		SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-episode-1"
-		SpecialEpiCheck1Load=$(
-			curl -sL "$SpecialEpiCheck1"
-		)
-		if [[ $SpecialEpiCheck1Load =~ 404 ]]; then
-			Fails="true"
-			SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-1"
-			SpecialEpiCheck1Load=$(
-				curl -sL "$SpecialEpiCheck1"
-			)
-		fi
-		SpecialEpiCheck2=$(
-			echo "$SpecialEpiCheck1Load" | \
-			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
-			sed 's|^ *||g' | \
-			sed '/^.*>/d' | \
-			grep -o '[0-9]*\.[0-9]' | \
-			xargs
-		)
-		if [[ -n "$SpecialEpiCheck2" ]]; then
-		InfoFunc "This Series Have Special Episodes"
-			for SpecialEpi in $SpecialEpiCheck2; do
-				echo "Episode: $SpecialEpi"
-			done
-		fi
-		EpisodeReadPageLoad="$(
-			echo "$SpecialEpiCheck1Load" | \
-			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
-			sed -n '/<div class="name">/,/<\/div>/p' | \
-			sed 's|^ *||g' | \
-			sed '/^.*>/d' | \
-			sort -V | \
-			grep -o 'Episode [0-9]*.[0-9]*' | \
-			sed 's|Episode ||g'
-		)"
-		LeastEpiList=$(
-			echo "$EpisodeReadPageLoad" | \
-			tr -d " " | \
-			head -1
-		)
-		LastEpiList=$(
-			echo "$EpisodeReadPageLoad" | \
-			tr -d " " | \
-			tail -1
-		)
-	else
-		SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-episode-1"
-		SpecialEpiCheck1Load=$(
-			curl -sL "$SpecialEpiCheck1"
-		)
-		if [[ $SpecialEpiCheck1Load =~ 404 ]]; then
-			Fails="true"
-			SpecialEpiCheck1="$BASE_URL/videos/$SerNameFile-1"
-			SpecialEpiCheck1Load=$(
-				curl -sL "$SpecialEpiCheck1"
-			)
-		fi
-		SpecialEpiCheck2=$(
-			echo "$SpecialEpiCheck1Load" | \
-			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
-			sed 's|^ *||g' | \
-			sed '/^.*>/d' | \
-			grep -o '[0-9]*\.[0-9]' | \
-			xargs
-		)
-		if [[ -n "$SpecialEpiCheck2" ]]; then
-			InfoFunc "This Series Have Special Episodes"
-			for SpecialEpi in $SpecialEpiCheck2; do
-				echo "Episode: $SpecialEpi"
-			done
-		fi
-		EpisodeReadPageLoad="$(
-			echo "$SpecialEpiCheck1Load" | \
-			sed -n '/<ul class="listing items lists">/,/<\/ul>/p' | \
-			sed -n '/<div class="name">/,/<\/div>/p' | \
-			sed 's|^ *||g' | \
-			sed '/^.*>/d' | \
-			sort -V | \
-			grep -o 'Episode [0-9]*.[0-9]*' | \
-			sed 's|Episode ||g'
-		)"
-		LeastEpiList=$(
-			echo "$EpisodeReadPageLoad" | \
-			tr -d " " | \
-			head -1
-		)
-		LastEpiList=$(
-			echo "$EpisodeReadPageLoad" | \
-			tr -d " " | \
-			tail -1
-		)
-	fi
-}
-
-#######################################
-#           Range Download            #
-#######################################
-
-# Range Downloads are Relying only on Default and Server 1 only (Default to Avoid Downloading Issues)
-function DownloadUtilityForRange(){
-	if [[ "$EpisodeSelected" =~ "-" ]]; then
-		EpiScrape1="$(echo -e "$EpisodeSelected" | tr '-' "\n")"
-		EpiScrape2="$(echo -e "$EpiScrape1" | head -n -1)"
-		EpiScrape3="$(echo -e "$EpiScrape1" | tail -n -1)"
-			if ! [[ $EpiScrape2 =~ [0-9]* ]]; then
-				ErrorFunc3a "$EpiScrape2 <- Must be Number" >&2
-				exit 1
-			elif ! [[ $EpiScrape3 =~ [0-9]* ]]; then
-				ErrorFunc3a "$EpiScrape3 <- Must be Number" >&2
-				exit 1
-			fi
-		MainMenuMessage
-		InfoFunc "Checking Episodes, Please Wait..."
-		QualityPicker="high"
-		for EpiCheck in $(seq "$EpiScrape2" "$EpiScrape3" | xargs); do
-			if [[ $Fails == "true" ]]; then
-				EPS="$SerNameFile-$EpiCheck"
-			else
-				EPS="$SerNameFile-episode-$EpiCheck"
-			fi
-			DetectNotFound=$(
-				curl -sL "$BASE_URL/videos/$EPS"
-			)
-			if [[ "$DetectNotFound" == *404* ]]; then
-				ErrorFunc2c "Episode Not Found, Episode $EpiCheck" >&2
-				exit 3
-			fi
-		done
-		ParseToHist "Download"
-# For Looping Arithmetic of Episodes
-		for ((i=EpiScrape2;i<=EpiScrape3;i++)); do
-			if [[ $Fails == "true" ]]; then
-				EPS="$SerNameFile-$i"
-			else
-				EPS="$SerNameFile-episode-$i"
-			fi
-			LinkFor=$(
-				curl -sL "$BASE_URL/videos/$EPS" | \
-				sed -n '/<div class="play-video">/,/<\/div>/p' | \
-				grep -o "//[^'\"<>]*" | \
-				sed 's|streaming.php|download|g' | \
-				sed 's|//|https://|g'
-			)
-			if [[ "$LinkFor" == "" ]]; then
-				ErrorFunc2c "The Episode $i is Not Released yet (Not Exist)" >&2
-				exit 3
-			fi
-			if [[ $server == "1" ]]; then
-				Server1Ranging "$LinkFor"
-			else
-				DirectDownLinksList=$(
-					curl -sL "$LinkFor" | \
-					sed -n '/<div class="dowload">/,/<\/div>/p' | \
-					grep -o "https[^'\"<>]*" | \
-					grep -e 'loadfast1' -e 'gogo-cdn' -e 'vidstreaming' | \
-					tac | \
-					xargs
-				)
-			fi
-			if [[ -z "$DirectDownLinksList" ]]; then
-				ErrorFunc3d "Server Not Found" >&2
-				exit 4
-			fi
-# Looping to Check Every Link, If it fails proceed to other Quality
-			for LISTER in $DirectDownLinksList; do
-				if [[ $LISTER =~ gogo-cdn ]]; then
-					ConGrep=$(
-						curl -e "$BASE_URL" -LsI "$LISTER" | \
-						grep '[C|c]ontent-[L|l]ength' | \
-						awk '{print $2}' | \
-						tr -dc '[:print:]'
-					)
-				else
-					LISTER=${LISTER//amp;/}
-					ConGrep=$(
-						curl -e "$LISTER" -LsI "$LISTER" | \
-						grep '[C|c]ontent-[L|l]ength' | \
-						awk '{print $2}' | \
-						tr -dc '[:print:]'
-					)
-				fi
-				if [[ -z "$ConGrep" ]]; then
-					ConGrep="1"
-				fi
-				if [[ "$ConGrep" -gt "225000" ]]; then
-					MainDirectL="$LISTER"
-					break
-				else
-					ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-				fi
-			done
-			if [[ -z "$MainDirectL" ]]; then
-				ErrorFunc5d "Server Failed to Fetch" >&2
-				exit 4
-			fi
-			if [[ $MainDirectL =~ gogo-cdn ]]; then
-				RefMainDir="$BASE_URL"
-			else
-				RefMainDir="$MainDirectL"
-			fi
-			FILEVIDNAME="$SerNameFile-EPI$i.mp4"
-			echo
-			InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-			InfoFunc "Now Downloading Episode $i"
-			TimeStart=$(date +%s)
-			if [[ "$utility" =~ $HHSS ]]; then
-				if [ "$utility" == "1" ]; then
-					trapDel
-					aria2c -x 16 \
-								-s 16 \
-								--console-log-level=error \
-								--referer="$RefMainDir" \
-								--download-result=hide \
-								--auto-save-interval=0 "$MainDirectL" \
-								-o "$FILEVIDNAME"
-					echo
-					TimeElapse=$(date +%s)
-					InfoFunc "Downloading Episode $i Done!!"
-					AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-				elif [ "$utility" == "2" ]; then
-					trapDel1
-					DownloaderOwn3 "$MainDirectL" "$FILEVIDNAME"
-				fi
-			else
-				ErrorFunc1e "Invalid Utility Number..." >&2
-				exit 5
-			fi
-		done
-	else
-		if [[ "$EpisodeSelected" =~ [M|m]ovie ]]; then
-			if [[ $Fails == "true" ]]; then
-				EPS="$SerNameFile-$i"
-			else
-				EPS="$SerNameFile-episode-$i"
-			fi
-			FILEVIDNAME="$SerNameFile-MOVIE.mp4"
+		crafted_url_page="${BASE_URL}/videos/${series_baseorigin}-episode-${1}"
+		if [[ ${dub_mode} == "1" ]]; then
+			FILEVIDNAME="${series_baseorigin}-EPI${1}-DUB.mp4"
 		else
-			if [[ $EpisodeSelected =~ .*[.].* ]]; then
-				EpisodeSelected=$(
-				echo "$EpisodeSelected" | tr '.' '-'
-				)
-			fi
-			if [[ $Fails == "true" ]]; then
-				EPS="$SerNameFile-$EpisodeSelected"
-			else
-				EPS="$SerNameFile-episode-$EpisodeSelected"
-			fi
-			FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
-		fi
-		if [[ $WatchAnime == "1" ]]; then
-			CheckersIfAvailable
-			WatchAnime
-		else
-			CheckersIfAvailable
-			ServerGreppers
-			QualityPicker
+			FILEVIDNAME="${series_baseorigin}-EPI${1}.mp4"
 		fi
 	fi
 }
 
-# Function Used to Check and Pass the URL index to Server Greppers Function
-function CheckersIfAvailable(){
+function url_get_streams(){
 	PageLoaderCheck=$(
-		curl -sL "$BASE_URL/videos/$EPS"
+		curl -sL "${crafted_url_page}"
 	)
-	if [[ "$PageLoaderCheck" =~ ^(404)$ ]]; then
-		ErrorFunc2c "Episode Not Found" >&2
+	if [[ "$PageLoaderCheck" == "404" ]]; then
+		err_func "2c" "Episode Not Found" >&2
 		exit 3
 	fi
-	if ! [[ $WatchAnime == "1" ]]; then
-		LinkFor=$(
-			echo "$PageLoaderCheck" | \
-			sed -n '/<div class="play-video">/,/<\/div>/p' | \
-			grep -o "//[^'\"<>]*" | \
-			sed 's|streaming.php|download|g' | \
-			sed 's|//|https://|g'
-		)
-	else
-		LinkFor=$(
-			echo "$PageLoaderCheck" | \
-			sed -n '/<div class="play-video">/,/<\/div>/p' | \
-			grep -o "//[^'\"<>]*" | \
-			sed 's|//|https://|g'
-		)
-		LinkForServer1=$(
-			echo "$PageLoaderCheck" | \
-			sed -n '/<div class="play-video">/,/<\/div>/p' | \
-			grep -o "//[^'\"<>]*" | \
-			sed 's|streaming.php|download|g' | \
-			sed 's|//|https://|g'
-		)
-	fi
-	if [[ "$LinkFor" == "" ]]; then
-		ErrorFunc1d "Returned 404 Not Found" >&2
-		exit 3
-	elif [[ "$(curl -sL "$LinkFor")" == *"Blocked"* ]]; then
-		ErrorFunc2d "Episode Unavailable" >&2
+	base_streaming_url=$(
+		sed -n '/<div class="play-video">/,/<\/div>/p' <<< "$PageLoaderCheck" | \
+		grep -o "//[^'\"<>]*" | sed 's|//|https://|g')
+	if [[ "${base_streaming_url}" == "" ]]; then
+		err_func "1d" "Returned 404 Not Found" >&2
 		exit 3
 	fi
 }
 
-# Function Used to Pass the URL to the Servers
-function ServerGreppers(){
-	if [[ "$server" =~ $HHSS ]];then
-		if [[ "$server" == "default" ]]; then
-			DirectDownLinksList=$(
-				curl -sL "$LinkFor" | \
-				sed -n '/<div class="dowload">/,/<\/div>/p' | \
-				grep -o "https[^'\"<>]*" | \
-				grep -e 'loadfast1' -e 'gogo-cdn' -e 'vidstreaming' | \
-				tac | \
-				xargs
-			)
-		elif [[ "$server" == "1" ]]; then
-			MainDirectLS1=$(
-				curl -sL "$LinkFor" | \
-				sed -n '/<div class="dowload">/,/<\/div>/p' | \
-				grep -o "https[^'\"<>]*" | \
-				grep 'sbplay' | \
-				sed -n 1p
-			)
-		elif [[ "$server" == "2" ]]; then
-			MainDirectLS2=$(
-				curl -sL "$LinkFor" | \
-				sed -n '/<div class="dowload">/,/<\/div>/p' | \
-				grep -o -e "https[^'\"<>]*" -e "http[^'\"<>]*" | \
-				grep 'mp4upload'
-			)
-		elif [[ "$server" == "3" ]]; then
-			MainDirectLS3=$(
-				curl -sL "$LinkFor" | \
-				sed -n '/<div class="dowload">/,/<\/div>/p' | \
-				grep -o "https[^'\"<>]*" | \
-				grep -e 'fplayer' -e 'fembed' | \
-				sed -n 1p
-			)
-		fi
-	else
-		ErrorFunc1e "Invalid Server Value..." >&2
-		exit 5
+function server_selector(){
+	base_streaming_url_load=$(curl -sL "${1}")
+	if [[ "${base_streaming_url_load}" == *"Blocked"* ]]; then
+		err_func "2d" "Episode Unavailable" >&2
+		exit 3
+	fi
+	if [[ "${server}" == "1" ]]; then
+		main_rink=$(
+			sed -n '/<div id="list-server-more">/,/<\/div>/p' <<< "${base_streaming_url_load}" | \
+			grep -o "https[^'\"<>]*" | grep -e 'fplayer' -e 'fembed' | sed 's|/v/|/f/|g' | \
+			sed -n 1p)
+	elif [[ "${server}" == "default" ]]; then
+		main_rink=$(
+			sed -n '/<div id="list-server-more">/,/<\/div>/p' <<< "${base_streaming_url_load}" | \
+			grep -o -e "https[^'\"<>]*" -e "http[^'\"<>]*" | grep 'sbplay' | \
+			awk -F[/] '{print $5}' | tr -dc '[:print:]')
 	fi
 }
 
-#######################################
-#        Download Utilities           #
-#######################################
-
-function DownloaderOwn(){
-	if [[ $(ls) =~ $2 ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
+function server_fembed(){
+	main_urlserver=${1}
+	if [[ -z "${main_urlserver}" ]]; then
+		err_func "3d" "Server Not Found" >&2
+		exit 4
+	elif [[ $(ls) =~ ${FILEVIDNAME} ]]; then
+		err_func "2b" "You Already Downloaded the Episode" >&2
 		exit 2
 	fi
-	TimeStart=$(date +%s)
-	axel -n 28 --header="Referer: $1" "$1" -o "$2" | \
-	mawk -W interactive 'NR % 25 == 1' | \
-	mawk -W interactive '{print $2" "$8" "$9}' | \
-	while read -r Bar; do
-		bol1=$(
-			echo "$Bar" | \
-			awk '{print $1}'
-		)
-		bol2=$(
-			echo "$Bar" | \
-			awk '{print $2" "$3}' | \
-			sed 's|[][]||g'
-		)
-		barron="${bol1//[!0-9]/}"
-		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown "$barron" 100 "$bol2"
-		fi
-	done
-	TimeElapse=$(date +%s)
-	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
-}
-
-function DownloaderOwn1(){
-	if [[ $(ls) =~ $2 ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
+	refUrl=$(echo "${main_urlserver}" | awk -F[/] '{print $3}' | sed 's|^|https://|g')
+	use_apiserverget=$(
+		curl -sL "${main_urlserver}" | grep '$.post' | awk -F["'"] '{print $2}' | \
+		sed "s|/api|${refUrl}/api|g")
+	get_dl_list=$(
+		curl -s -X POST -e "${refUrl}" "$use_apiserverget" | \
+		grep -o "https:[^'\"<>]*" | grep 'fvs' | sed 's/[\]//g' | tac)
+	if [[ ${quality_picker} =~ [h|H]igh ]]; then
+		get_dl_direct=$(head -n 1 <<< "${get_dl_list}")
+	elif [[ ${quality_picker} =~ [N|n]ormal ]]; then
+		get_dl_direct=$(tail -n 2 <<< "${get_dl_list}" | head -n 1)
+	elif [[ ${quality_picker} =~ [l|L]ow ]]; then
+		get_dl_direct=$(tail -n 1 <<< "${get_dl_list}")
 	fi
-	TimeStart=$(date +%s)
-	axel -n 16 --header="Referer: $RootUrl" "$1" -o "$2" | \
-	mawk -W interactive 'NR % 25 == 1' | \
-	mawk -W interactive '{print $2" "$8" "$9}' | \
-	while read -r Bar; do
-		bol1=$(
-			echo "$Bar" | \
-			awk '{print $1}'
-		)
-		bol2=$(
-			echo "$Bar" | \
-			awk '{print $2" "$3}' | \
-			sed 's|[][]||g'
-		)
-		barron="${bol1//[!0-9]/}"
-		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown "$barron" 100 "$bol2"
-		fi
-	done
-	TimeElapse=$(date +%s)
-	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
-}
-
-# Only 2 Simultaneous Downloads to Prevent Rate Limiting
-# Plus Bypass Certificates, Avoiding to Reject the Request
-function DownloaderOwn2(){
-	if [[ $(ls) =~ $2 ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	TimeStart=$(date +%s)
-	axel -n 2 --insecure --header="Referer: $RootUrl" "$1" -o "$2" | \
-	mawk -W interactive 'NR % 25 == 1' | \
-	mawk -W interactive '{print $2" "$8" "$9}' | \
-	while read -r Bar; do
-		bol1=$(
-			echo "$Bar" | \
-			awk '{print $1}'
-		)
-		bol2=$(
-			echo "$Bar" | \
-			awk '{print $2" "$3}' | \
-			sed 's|[][]||g'
-		)
-		barron="${bol1//[!0-9]/}"
-		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown "$barron" 100 "$bol2"
-		fi
-	done
-	TimeElapse=$(date +%s)
-	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $EpisodeSelected Done!!")"
-}
-
-function DownloaderOwn3(){
-	if [[ $(ls) =~ $2 ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	TimeStart=$(date +%s)
-	axel -n 28 --header="Referer: $BASE_URL" "$1" -o "$2" | \
-	mawk -W interactive 'NR % 25 == 1' | \
-	mawk -W interactive '{print $2" "$8" "$9}' | \
-	while read -r Bar; do
-		bol1=$(
-			echo "$Bar" | \
-			awk '{print $1}'
-		)
-		bol2=$(
-			echo "$Bar" | \
-			awk '{print $2" "$3}' | \
-			sed 's|[][]||g'
-		)
-		barron="${bol1//[!0-9]/}"
-		if [[ $barron =~ ^([0-9]+)$ ]]; then
-			ProgressBarModifiedDown "$barron" 100 "$bol2"
-		fi
-	done
-	TimeElapse=$(date +%s)
-	echo
-	printf "%*s\r%s\r\n" "$(tput cols)" "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish" "$(InfoFunc "Downloading Episode $i Done!!")"
-}
-
-#######################################
-#         Quality And Servers         #
-#######################################
-
-# Default Server
-function DefaultQuality(){
-	MainDirectLinkDec=$*
-	MainDirectLinkDec="${MainDirectLinkDec//amp;/}"
-	if [[ -z "$MainDirectLinkDec" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	for LISTER in $MainDirectLinkDec; do
-		if [[ $LISTER =~ gogo-cdn ]]; then
-			ConGrep=$(
-				curl -e "$BASE_URL" -LsI "$LISTER" | \
-				grep '[C|c]ontent-[L|l]ength' | \
-				awk '{print $2}' | \
-				tr -dc '[:print:]'
-			)
-		else
-			ConGrep=$(
-				curl -e "$LISTER" -LsI "$LISTER" | \
-				grep '[C|c]ontent-[L|l]ength' | \
-				awk '{print $2}' | \
-				tr -dc '[:print:]'
-			)
-		fi
-		if [[ -z "$ConGrep" ]]; then
-			ConGrep="1"
-		fi
-		if [[ "$ConGrep" -gt "225000" ]]; then
-			MainDirectLink="$LISTER"
-			break
-		else
-			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-		fi
-	done
-	if [[ -z "$MainDirectLink" ]]; then
-		ErrorFunc5d "Server Failed to Fetch" >&2
-		exit 4
-	fi
-	if [[ $MainDirectLink =~ gogo-cdn ]]; then
-		RefMainDir="$BASE_URL"
-	else
-		RefMainDir="$MainDirectLink"
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			TimeStart=$(date +%s)
-			trapDel
-			aria2c -x 16 \
-						-s 16 \
-						--console-log-level=error \
-						--referer="$RefMainDir" \
-						--download-result=hide \
-						--auto-save-interval=0 "$MainDirectLink" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn "$MainDirectLink" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-# SBPlay Server (Server 1)
-function Server1(){
-	MainDownLink=$1
-	if [[ -z "$MainDownLink" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	RootURL=$(
-		echo "$MainDownLink" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g'
-	)
-	for QulitySB in 1920 1280 640; do
-		VaLMain=$(
-			curl -sL "$MainDownLink" | \
-			grep -o '<tr><td><a.*href="#".*onclick="download.*>.*</td>' | \
-			grep $QulitySB | \
-			awk -F["'"] '{print $2" "$4" "$6}'
-		)
-		if [[ -n $VaLMain ]]; then
-			break
-		fi
-	done
-	ID=$(
-		echo "$VaLMain" | \
-		awk '{print $1}'
-	)
-	MODE=$(
-		echo "$VaLMain" | \
-		awk '{print $2}'
-	)
-	HASH=$(
-		echo "$VaLMain" | \
-		awk '{print $3}'
-	)
-	MainDownLink="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
-	MainDirectL=$(
-		curl -sL "$MainDownLink" | \
-		grep 'Direct Download' | \
-		grep -o "https:[^'\"<>]*"
-	)
-	MainDirectL=$(echo "$MainDirectL" | tr -d '\n')
-	ConGrep=$(
-		curl -e "$RootURL" -LsI "$MainDirectL" | \
-		grep '[C|c]ontent-[L|l]ength' | \
-		awk '{print $2}' | \
-		tr -dc '[:print:]'
-	)
-	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
-		exit 4
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			TimeStart=$(date +%s)
-			trapDel
-			aria2c -x 16 \
-						-s 16 \
-						--console-log-level=error \
-						--referer="$RootURL" \
-						--check-certificate=false \
-						--download-result=hide \
-						--auto-save-interval=0 "$MainDirectL" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn1 "$MainDirectL" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-function Server1Ranging(){
-	MainDownLink=$(
-		curl -sL "$1" | \
-		sed -n '/<div class="dowload">/,/<\/div>/p' | \
-		grep -o "https[^'\"<>]*" | \
-		grep 'sbplay' | \
-		sed -n 1p
-	)
-	if [[ -z "$MainDownLink" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	fi
-	RootURL=$(
-		echo "$MainDownLink" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g'
-	)
-	for QulitySB in 1920 1280 640; do
-		VaLMain=$(
-			curl -sL "$MainDownLink" | \
-			grep -o '<tr><td><a.*href="#".*onclick="download.*>.*</td>' | \
-			grep $QulitySB | \
-			awk -F["'"] '{print $2" "$4" "$6}'
-		)
-		if [[ -n $VaLMain ]]; then
-			break
-		fi
-	done
-	ID=$(
-		echo "$VaLMain" | \
-		awk '{print $1}'
-	)
-	MODE=$(
-		echo "$VaLMain" | \
-		awk '{print $2}'
-	)
-	HASH=$(
-		echo "$VaLMain" | \
-		awk '{print $3}'
-	)
-	MainDownLink="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
-	MainDirectL=$(
-		curl -sL "$MainDownLink" | \
-		grep 'Direct Download' | \
-		grep -o "https:[^'\"<>]*"
-	)
-	MainDirectL=$(echo "$MainDirectL" | tr -d '\n')
-	ConGrep=$(
-		curl -e "$RootURL" -LsI "$MainDirectL" | \
-		grep '[C|c]ontent-[L|l]ength' | \
-		awk '{print $2}' | \
-		tr -dc '[:print:]'
-	)
-	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
-		exit 4
-	fi
-	DirectDownLinksList="$MainDirectL"
-}
-
-# MP4 Upload Server
-function Server2(){
-	MainDownLink=$1
-	if [[ -z "$MainDownLink" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	RootUrl="https://www.mp4upload.com"
-	if [[ "$(echo "$MainDownLink" | awk -F[:/] '{print $1}')" == "http" ]]; then
-		MainDownLink="${MainDownLink//http:/https:}"
-		# echo "$MainDownLink" | \
-		# sed 's|http://|https://|g'
-	fi
-# 1st Connection Bridge
-	Loader1STConn=$(
-		curl -sL "$MainDownLink"
-	)
-	ID=$(
-		echo "$Loader1STConn" | \
-		sed -n '/<input type="hidden".*/,/>/p' | \
-		grep 'name="id"' | \
-		awk -F['"'] '{print $6}'
-	)
-	FNAME=$(
-		echo "$Loader1STConn" | \
-		sed -n '/<input type="hidden".*/,/>/p' | \
-		grep 'name="fname"' | \
-		awk -F['"'] '{print $6}'
-	)
-	OUT=$(curl -s -X POST -d "op=download1&usr_login=&id=$ID&fname=$FNAME&referer=&method_free=+" "$MainDownLink")
-	echo "$OUT" > /dev/null
-# 2nd Connection Bridge
-	ID=$(
-		curl -sL "$MainDownLink" | \
-		sed -n '/<input type="hidden".*/,/>/p' | \
-		grep 'name="id"' | \
-		awk -F['"'] '{print $6}'
-	)
-	MainDirectLink=$(
-		curl -sD- -ke "$RootUrl" -X POST -d "op=download2&id=$ID&rand=&referer=$MainDownLink&method_free=+&method_premium=" "$MainDownLink"
-	)
-	MainDirectLUni=$(
-		echo "$MainDirectLink" | \
-		grep location | \
-		awk '{print $2}' | \
-		sed $'s/[^[:print:]\t]//g'
-	)
-	ConGrep=$(
-		curl -e "$RootUrl" -LskI "$MainDirectLUni" | \
-		grep '[C|c]ontent-[L|l]ength' | \
-		awk '{print $2}' | \
-		tr -dc '[:print:]'
-	)
-	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
-		exit 4
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			TimeStart=$(date +%s)
-			trapDel
-			aria2c -x 2 \
-						-s 2 \
-						--console-log-level=error \
-						--referer "$RootUrl" \
-						--check-certificate=false \
-						--download-result=hide --auto-save-interval=0 "$MainDirectLUni" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn2 "$MainDirectLUni" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-# FPlayer (Fembed) Server
-function Server3(){
-	MainDownLink=$1
-	if [[ -z "$MainDownLink" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	RootURL=$(
-		echo "$MainDownLink" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g'
-	)
-	GetAPIServ1=$(
-		curl -sL "$MainDownLink" | \
-		grep '$.post' | \
-		awk -F["'"] '{print $2}' | \
-		sed "s|/api|$RootURL/api|g"
-	)
-	DirectDownLinksList=$(
-		curl -s -X POST -e "$RootURL" "$GetAPIServ1" | \
-		grep -o "https:[^'\"<>]*" | \
-		grep 'fvs' | \
-		sed 's/[\]//g' | \
-		tac | \
-		xargs
-	)
-	for LISTER in $DirectDownLinksList; do
-		ConGrep=$(
-			curl -e "$RootURL" -LksI "$LISTER" | \
-			grep '[C|c]ontent-[L|l]ength' | \
-			awk '{print $2}' | \
-			tr -dc '[:print:]'
-		)
-		if [[ -z "$ConGrep" ]]; then
-			ConGrep="1"
-		fi
-		if [[ "$ConGrep" -gt "225000" ]]; then
-			MainDownL="$LISTER"
-			break
-		else
-			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-		fi
-	done
-	if [[ -z "$MainDownL" ]]; then
-		ErrorFunc5d "Server Failed to Fetch" >&2
-		exit 4
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			TimeStart=$(date +%s)
-			trapDel
-			aria2c -x 2 \
-						-s 2 \
-						--console-log-level=error \
-						--referer="$RootURL" \
-						--check-certificate=false \
-						--download-result=hide \
-						--auto-save-interval=0 "$MainDownL" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn1 "$MainDownL" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-# Low Qualities
-function LowQuality(){
-	MainDirectL=$(
-		curl -sL "$LinkFor" | \
-		sed -n '/<div class="dowload">/,/<\/div>/p' | \
-		grep -o "https[^'\"<>]*" | \
-		grep -e 'loadfast1' -e 'gogo-cdn' | \
-		tail -3 | \
-		head -1
-	)
-	if [[ $MainDirectL =~ gogo-cdn ]]; then
-		ConGrep=$(
-			curl -e "$BASE_URL" -LsI "$MainDirectL" | \
-			grep '[C|c]ontent-[L|l]ength' | \
-			awk '{print $2}' | \
-			tr -dc '[:print:]'
-		)
-	else
-		ConGrep=$(
-			curl -e "$MainDirectL" -LsI "$MainDirectL" | \
-			grep '[C|c]ontent-[L|l]ength' | \
-			awk '{print $2}' | \
-			tr -dc '[:print:]'
-		)
-	fi
-	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
-		exit 4
-	fi
-	if [[ $MainDirectL =~ gogo-cdn ]]; then
-		RefMainDir="$BASE_URL"
-	else
-		RefMainDir="$MainDirectL"
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			trapDel
-			aria2c -x 16 \
-						-s 16 \
-						--console-log-level=error \
-						--referer="$RefMainDir" \
-						--download-result=hide \
-						--auto-save-interval=0 "$MainDirectL" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn "$MainDirectL" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-function Server1Low(){
-	MainDownLink=$1
-	if [[ -z "$MainDownLink" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	fi
-	RootURL=$(
-		echo "$MainDownLink" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g' | \
-		sed -n 1p
-	)
-	VaLMain=$(
-		curl -sL "$MainDownLink" | \
-		grep -o '<tr><td><a.*href="#".*onclick="download.*>.*</td>' | \
-		grep 640 | \
-		awk -F["'"] '{print $2" "$4" "$6}'
-	)
-	ID=$(
-		echo "$VaLMain" | \
-		awk '{print $1}'
-	)
-	MODE=$(
-		echo "$VaLMain" | \
-		awk '{print $2}'
-	)
-	HASH=$(
-		echo "$VaLMain" | \
-		awk '{print $3}'
-	)
-	MainDownLink="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
-	MainDirectL=$(
-		curl -sL "$MainDownLink" | \
-		grep 'Direct Download' | \
-		grep -o "https:[^'\"<>]*"
-	)
-	MainDirectL=$(echo "$MainDirectL" | tr -d '\n')
-	ConGrep=$(
-		curl -e "$RootURL" -LsI "$MainDirectL" | \
-		grep '[C|c]ontent-[L|l]ength' | \
-		awk '{print $2}' | \
-		tr -dc '[:print:]'
-	)
-	if [[ -z "$ConGrep" ]]; then
-		ErrorFunc4d "Server Downed/Flooded, Give it a try again" >&2
-		exit 4
-	fi
-	InfoFunc "Video Size: $(UnitConversion "$ConGrep")"
-	if [[ "$utility" =~ $HHSS ]]; then
-		if [ "$utility" == "1" ]; then
-			TimeStart=$(date +%s)
-			trapDel
-			aria2c -x 16 \
-						-s 16 \
-						--console-log-level=error \
-						--referer="$RootURL" \
-						--download-result=hide --auto-save-interval=0 "$MainDirectL" \
-						-o "$FILEVIDNAME"
-			echo
-			TimeElapse=$(date +%s)
-			InfoFunc "Downloading Episode $EpisodeSelected Done!!"
-			AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
-		elif [ "$utility" == "2" ]; then
-			trapDel1
-			DownloaderOwn1 "$MainDirectL" "$FILEVIDNAME"
-		fi
-	else
-		ErrorFunc1e "Invalid Utility Number..." >&2
-		exit 5
-	fi
-}
-
-#######################################
-#         Streams Servers         #
-#######################################
-
-function Server1Streamer(){
-	Streamer1=$(
-		curl -sL "$LinkForServer1" | \
-		sed -n '/<div class="dowload">/,/<\/div>/p' | \
-		grep -o "https[^'\"<>]*" | \
-		grep -e 'fplayer' -e 'fembed' | \
-		sed -n 1p
-	)
-	if [[ -z "$Streamer1" ]]; then
-		ErrorFunc3d "Server Not Found" >&2
-		exit 4
-	elif [[ $(ls) =~ $FILEVIDNAME ]]; then
-		ErrorFunc2b "You Already Downloaded the Episode" >&2
-		exit 2
-	fi
-	RootURL=$(
-		echo "$Streamer1" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g'
-	)
-	GetAPIServ1=$(
-		curl -sL "$Streamer1" | \
-		grep '$.post' | \
-		awk -F["'"] '{print $2}' | \
-		sed "s|/api|$RootURL/api|g"
-	)
-	DirectDownLinksList=$(
-		curl -s -X POST -e "$RootURL" "$GetAPIServ1" | \
-		grep -o "https:[^'\"<>]*" | \
-		grep 'fvs' | \
-		sed 's/[\]//g' | \
-		tac | \
-		xargs
-	)
-	for LISTER in $DirectDownLinksList; do
-		ConGrep=$(
-			curl -e "$RootURL" -LksI "$LISTER" | \
-			grep '[C|c]ontent-[L|l]ength' | \
-			awk '{print $2}' | \
-			tr -dc '[:print:]'
-		)
-		if [[ -z "$ConGrep" ]]; then
-			ConGrep="1"
-		fi
-		if [[ "$ConGrep" -gt "225000" ]]; then
-			QualitySTREAM="$LISTER"
-			break
-		else
-			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-		fi
-	done
-	if [[ -z "$QualitySTREAM" ]]; then
-		ErrorFunc5d "Server Failed to Fetch" >&2
+	if [[ -z "${get_dl_direct}" ]]; then
+		err_func "5d" "Server Failed to Fetch" >&2
 		exit 4
 	fi
 }
 
-function Server2Streamer(){
-	Streamer2=$(
-		curl -sL "$LinkForServer1" | \
-		sed -n '/<div class="dowload">/,/<\/div>/p' | \
-		grep -o "https[^'\"<>]*" | \
-		grep 'sbplay' | \
-		sed -n 1p
-	)
-	RootURL=$(
-		echo "$Streamer2" | \
-		awk -F[/] '{print $3}' | \
-		sed 's|^|https://|g'
-	)
-	for QulitySB in 1920 1280 640; do
-		VaLMain=$(
-			curl -sL "$Streamer2" | \
-			grep -o '<tr><td><a.*href="#".*onclick="download.*>.*</td>' | \
-			grep "$QulitySB" | \
-			awk -F["'"] '{print $2" "$4" "$6}'
-		)
-		if [[ -n $VaLMain ]]; then
-			break
-		fi
-	done
-	ID=$(
-		echo "$VaLMain" | \
-		awk '{print $1}'
-	)
-	MODE=$(
-		echo "$VaLMain" | \
-		awk '{print $2}'
-	)
-	HASH=$(
-		echo "$VaLMain" | \
-		awk '{print $3}'
-	)
-	GetSTREAMurl="$RootURL/dl?op=download_orig&id=$ID&mode=$MODE&hash=$HASH"
-	QualitySTREAM=$(
-		curl -sL "$GetSTREAMurl" | \
-		grep 'Direct Download' | \
-		grep -o "https:[^'\"<>]*"
-	)
-}
-
-function StreamGetLinkDefault(){
-	GetDATA=$(
-		curl -sL "$LinkForServer1" | \
-		sed -n '/<div class="dowload">/,/<\/div>/p' | \
-		grep -o "https[^'\"<>]*" | \
-		grep -e 'loadfast' -e 'gogo-cdn' -e 'vidstreaming' | \
-		tac | \
-		xargs
-	)
-	if [[ -z $GetDATA ]]; then 
-		ErrorFunc3d "Failed to get data" >&2
-		exit 4
-	fi
-	for LISTER in $GetDATA; do
-		if [[ $LISTER =~ gogo-cdn ]]; then
-			ConGrep=$(
-				curl -e "$BASE_URL" -LsI "$LISTER" | \
-				grep '[C|c]ontent-[L|l]ength' | \
-				awk '{print $2}' | \
-				tr -dc '[:print:]'
-			)
-		elif [[ $LISTER =~ loadfast ]]; then
-			LISTER=${LISTER//amp;/}
-			ConGrep=$(
-				curl -LsI "$LISTER" | \
-				grep '[C|c]ontent-[L|l]ength' | \
-				awk '{print $2}' | \
-				tr -dc '[:print:]'
-			)
-			elif [[ $LISTER =~ vidstreaming ]]; then
-			LISTER=${LISTER//amp;/}
-			ConGrep=$(
-				curl -LsI "$LISTER" | \
-				grep '[C|c]ontent-[L|l]ength' | \
-				awk '{print $2}' | \
-				tr -dc '[:print:]'
-			)
-		fi
-		if [[ -z "$ConGrep" ]]; then
-			ConGrep="1"
-		fi
-		if [[ "$ConGrep" -gt "225000" ]]; then
-			QualitySTREAM="$LISTER"
-			break
-		else
-			ErrorCatchFunc "Kek.. Server Down, so Im gonna do my Job to find another server"
-		fi
-	done
-	if [[ -z "$QualitySTREAM" ]]; then
-		ErrorFunc5d "Server Failed to Fetch" >&2
-		exit 4
-	fi
-}
-
-# Used to Get the Quality
-function QualityPicker(){
-	if [[ $QualityPicker = "" ]]; then
-		QualityPicker="high"
-	elif [[ ! $QualityPicker =~ ^([H|h]igh|[L|l]ow*)$ ]]; then
-		ErrorFunc2a "Undefined Option, Just pick between (High, Low) Server" >&2
-		sleep 2
-		unset QualityPicker
-		OverAllInputs
-	fi
-	case $QualityPicker in
-		high|High)
-			if [[ "$server" =~ $HHSS ]]; then
-				ParseToHist "Download"
-				if [[ "$server" == "default" ]]; then
-					MainMenuMessage
-					DefaultQuality "$DirectDownLinksList"
-					exit 0
-				elif [[ "$server" == "1" ]]; then
-					MainMenuMessage
-					Server1 "$MainDirectLS1"
-					exit 0
-				elif [[ "$server" == "2" ]]; then
-					MainMenuMessage
-					Server2 "$MainDirectLS2"
-					exit 0
-				elif [[ "$server" == "3" ]]; then
-					MainMenuMessage
-					Server3 "$MainDirectLS3"
-					exit 0
+function server_sbplay(){
+	r_play="$(printf "${1}" | code_ed)"
+	feed_load="$(dgs "\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x37\x63\x37\x63")${r_play}$(dgs "\x37\x63\x37\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x37\x63\x37\x63\x37\x33\x37\x34\x37\x32\x36\x35\x36\x31\x36\x64\x37\x33\x36\x32\x2f\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x37\x63\x37\x63\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x37\x36\x33\x33\x37\x36\x33\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x37\x36\x33\x33\x37\x36\x33\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x36\x33\x31\x33\x36\x36\x35\x33\x36\x33\x39\x33\x36\x36\x34\x33\x36\x33\x34\x33\x36\x36\x33\x33\x37\x36\x33\x33\x37\x36\x33\x33\x37\x33\x33\x33\x37\x33\x34\x33\x37\x33\x32\x33\x36\x33\x35\x33\x36\x33\x31\x33\x36\x36\x34\x33\x37\x33\x33\x33\x36\x33\x32\x37\x63\x37\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x36\x31\x36\x65\x36\x39\x36\x64\x36\x34\x36\x63\x37\x63\x37\x63\x37\x33\x37\x34\x37\x32\x36\x35\x36\x31\x36\x64\x37\x33\x36\x32")"
+	refUrl="sbplay2.com"
+	for try_sources in sources36 sources37 sourcesx38; do
+		resp_json=$(curl -sL "https://${refUrl}/${try_sources}/${feed_load}" \
+			-H "watchsb: streamsb" -e "${refUrl}")
+		if [[ ${resp_json} == *stream_data* ]]; then
+			craft_urlname="$(grep -oP '"title":"(.*?)"' <<< "${resp_json}" | awk -F['"'] '{print $4}' | tr -dc '[:print:]').mp4"
+			if [[ ${craft_urlname} =~ [[:space:]].\.mp4$ ]]; then
+				craft_urlname="$(sed 's|[[:space:]].\.mp4$|.mp4|g' <<< "${craft_urlname}")"
+			fi
+			resp_url=$(grep -o "https[^'\"<>]*" <<< "${resp_json}" | grep -E 'master\.m3u8\?client=' | sed -n 1p)
+			if [[ ${resp_url} =~ master\.m3u8\?client= ]]; then
+				resp_body=$(curl -sL "${resp_url}" -e "${refUrl}")
+				if [[ ${quality_picker} =~ [h|H]igh ]]; then
+					get_dl_direct=$(sed '/#.*/d;/^$/d' <<< "${resp_body}" | tac | head -n 1 | sed "s|/hls||g;s|index.*$|${craft_urlname}|g")
+				elif [[ ${quality_picker} =~ [N|n]ormal ]]; then
+					get_dl_direct=$(grep '1280x' <<< "${resp_body}" | grep -o "https[^'\"<>]*" | sed "s|/hls||g;s|iframes.*$|${craft_urlname}|g")
+				elif [[ ${quality_picker} =~ [l|L]ow ]]; then
+					get_dl_direct=$(grep '640x' <<< "${resp_body}" | grep -o "https[^'\"<>]*" | sed "s|/hls||g;s|iframes.*$|${craft_urlname}|g")
 				fi
-			else
-				ErrorFunc1e "Invalid Server Value..." >&2
-				exit 5
 			fi
-		;;
-	low|Low)
-		if [[ "$server" =~ $HHSS ]];then
-			if [[ $server == "default" ]]; then
-				LowQuality
-				exit 0
-			elif [[ $server == "1" ]]; then
-				Server1Low "$MainDirectLS1"
-			else
-				ErrorFunc2e "Low Quality only Available in Default Server and Server 1" >&2
-				exit 5
+			if [[ -n "${get_dl_direct}" ]]; then
+				break
 			fi
 		fi
-	esac
-}
-
-#######################################
-#         Misc Functions         #
-#######################################
-
-# For -i flag
-function SearchArgsInf(){
-	KeyWord=$1
-	GetAnimeNameInf=$(
-	{
-		curl -sL "https://gogoanime.wiki/search.html?keyword=$KeyWord"
-		curl -sL "https://gogoanime.wiki/search.html?keyword=$KeyWord&page=2"
-	} | \
-	sed -n '/<p class="name">/,/<\/p>/p' | \
-	grep -o '<a.*href=".*".*title=".*">' | \
-	grep -o 'title=".*"' | \
-	awk -F['"'] '{print $2}'
-	)
-	echo "$GetAnimeNameInf" | \
-	while read -r wiffles; do
-		if [[ "${#wiffles}" -gt 47 ]]; then
-			echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
-		else 
-			echo "${wiffles}"
-		fi
-	done | \
-	nl -w1 -s"+ " | \
-	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
-	read -rp "$(InputSign 'Enter a Number: ')" SelectedQuery
-	while ! [[ $SelectedQuery =~ $REGNUMBERONLY ]]; do
-		ErrorFunc1a "The input must be in Digit/Number" >&2
-		read -rp "$(InputSign 'Enter a Number: ')" SelectedQuery
 	done
-	QuerySelectLink=$(
-		curl -sL "https://gogoanime.wiki/search.html?keyword=$KeyWord" | \
-		sed -n '/<p class="name">/,/<\/p>/p' | \
-		grep -o "/category/[^'\"<>]*" | \
-		sed 's|/category/|https://gogoanime.wiki/category/|g' | \
-		sed -n "$SelectedQuery"p
-	)
-	QuerySelectLinkLoad=$(
-		curl -sL "$QuerySelectLink"
-	)
-	TyPe=$(
-		echo "$QuerySelectLinkLoad" | \
-		sed -n '/<p class="type">/,/<\/p>/p' | \
-		grep -o '.*/sub-category/.*' | \
-		awk -F['"'] '{print $4}'
-	)
-	GenRe=$(
-		echo "$QuerySelectLinkLoad" | \
-		sed -n '/<p class="type">/,/<\/p>/p' | \
-		grep -o '.*/genre/.*' | \
-		grep -o 'title="[a-zA-Z0-9]*"' | \
-		awk -F['"'] '{print $2}' | \
-		xargs | \
-		sed 's| |, |g'
-	)
-	StaTus=$(
-		echo "$QuerySelectLinkLoad" | \
-		sed -n '/<p class="type">/,/<\/p>/p' | \
-		sed -n '/<span>Status:/,/<\/span>/p' | \
-		grep -o 'title=".*".*>' | \
-		grep -o '>.*<' | \
-		tr -d "<>"
-	)
-	ReleaseDate=$(
-		echo "$QuerySelectLinkLoad" | \
-		sed -n '/<p class="type">/,/<\/p>/p' | \
-		grep -oE "20[0-2][0-9]|199[0-9]" | \
-		uniq
-	)
-	ParseToHist "Info"
-	echoterd "Anime Information:"
-	echoterd "Type: $TyPe"
-	echoterd "Genre: $GenRe"
-	echoterd "Released: $ReleaseDate"
-	echoterd "Status: $StaTus"
-	exit 0
-}
-
-# For Printing History in Table
-function ParseToHist(){
-	ModeSpecification=$1
-	QualityPickerEd="${QualityPicker^}"
-	if [[ $QueryDetect == "" ]]; then
-		AnimeNameGetParse=$(
-			echo "$GetAnimeNameInf" | \
-			sed -n "$SelectedQuery"p
-		)
-	else
-		AnimeNameGetParse=$(
-			echo "$QueryDetect" | \
-			sed -n "$SeriesSelected"p
-		)
-	fi
-	if [[ $EpisodeSelected == "" ]]; then
-		echo "${AnimeNameGetParse}#None#${ModeSpecification}#None" >> "$HOME/.histemina"
-	else
-		echo "${AnimeNameGetParse}#${EpisodeSelected}#${ModeSpecification}#${QualityPickerEd}" >> "$HOME/.histemina"
+	if [[ -z "${get_dl_direct}" ]]; then
+		err_func "5d" "Server not Found" >&2
+		exit 4
+	elif [[ "${resp_json}" =~ "Not Found" ]]; then
+		err_func "5d" "Server not Found" >&2
+		exit 4
 	fi
 }
 
-function BacktoHist(){
-	unset infarg AnimeSearch EpisodeSelected QualityPicker
-	DispPickHist=$(
-		grep -E 'Download|Watch' "$HOME/.histemina" | \
-		uniq | \
-		tac
-	)
-	echo -e "$DispPickHist" | \
-	awk -F[#] '{print $1}' | \
-	while read -r wiffles; do
-		if [[ "${#wiffles}" -gt 47 ]]; then
-			echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
-		else 
-			echo "${wiffles}"
-		fi
-	done | \
-	nl -w1 -s"+ " | \
-	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
-	read -rp "$(InputSign 'Enter a Number: ')" SelectedPick
-	while ! [[ $SelectedPick =~ [0-9]* ]]; do
-		ErrorFunc1a "The input must be in Digit/Number" >&2
-		read -rp "$(InputSign 'Enter a Number: ')" SelectedPick
-	done 
-	SelectedPickSeries=$(
-		echo "$DispPickHist" | \
-		sed -n "$SelectedPick"p
-	)
-	AnimeName=$(
-		echo "$SelectedPickSeries" | \
-		awk -F[#] '{print $1}'
-	)
-	Episoode=$(
-		echo "$SelectedPickSeries" | \
-		awk -F[#] '{print $2}'
-	)
-	Moode=$(
-		echo "$SelectedPickSeries" | \
-		awk -F[#] '{print $3}'
-	)
-	Quuality=$(
-		echo "$SelectedPickSeries" | \
-		awk -F[#] '{print $4}'
-	)
-	AnimeSearch="${AnimeName}"
-	EpisodeSelected="${Episoode}"
-	SeriesSelected="1"
-	if [[ $Moode == "Watch" ]]; then
-		WatchAnime="1"
-	fi
-	QualityPicker="${Quuality}"
-}
-
-
-#######################################
-#         Streaming Setups         #
-#######################################
-
-function CallWatchSequence(){
-	if [[ $Fails == "true" ]]; then
-		EPS="$SerNameFile-$EpisodeSelected"
-	else
-		EPS="$SerNameFile-episode-$EpisodeSelected"
-	fi
-	FILEVIDNAME="$SerNameFile-EPI$EpisodeSelected.mp4"
-}
-
-function WatchGetData(){
-	CallWatchSequence
-	CheckersIfAvailable
-	if [[ $QualityPicker = "" ]]; then
-		QualityPicker="high"
-	elif [[ ! $QualityPicker =~ ^([H|h]igh|[L|l]ow*)$ ]]; then
-		ErrorFunc2a "Undefined Option, Just pick between (High, Low) Server" >&2
+function watch_get_data(){
+	craft_url "${epside_selected}"
+	url_get_streams
+	server_selector "${base_streaming_url}"
+	if [[ ${quality_picker} = "" ]]; then
+		quality_picker="high"
+	elif [[ ! ${quality_picker} =~ ^([H|h]igh|[L|l]ow|[N|n]ormal)$ ]]; then
+		err_func "2a" "Undefined Option, Just pick between (High, Normal, Low) Server" >&2
 		sleep 2
-		unset QualityPicker
-		OverAllInputs
+		unset quality_picker
+		main_inputs
 	fi
-	if [[ "$server" =~ $HHSS ]];then
-		if [[ $server == "default" ]]; then
-			StreamGetLinkDefault
-		elif [[ $server == "1" ]]; then
-			Server1Streamer
-		elif [[ $server == "2" ]]; then
-			Server2Streamer
-		else
-			ErrorFunc2e "Watch Mode only Available in Default and Server 1" >&2
-			exit 5
-		fi
+	if [[ ${server} == "1" ]]; then
+		server_fembed "${main_rink}"
+	elif [[ ${server} == "default" ]]; then
+		server_sbplay "${main_rink}"
 	else
-		ErrorFunc1e "Invalid Server Value..." >&2
+		err_func "2e" "Watch Mode only Available in Default and Server 1" >&2
 		exit 5
 	fi
-	ParseToHist "Watch"
-	if [[ $VidPlayer == "mpv" ]]; then
-		if [[ $server == "default" ]]; then
-			refSet="gogoplay1.com" # Required Incase of Needed Headers
-		else
-			refSet="$QualitySTREAM"
-		fi
-		setsid -f mpv --http-header-fields="Referer: $refSet" "$QualitySTREAM" >/dev/null 2>&1
-	elif [[ $VidPlayer == "vlc" ]]; then
+	parse_hist "Watch"
+	if [[ ${vid_player} == "mpv" ]]; then
+		setsid -f mpv --http-header-fields="Referer: ${refUrl}" "${get_dl_direct}" >/dev/null 2>&1
+	elif [[ ${vid_player} == "vlc" ]]; then
 		# ENV Variable change
 		if [[ -n "$(ls /mnt/c/'Program Files (x86)'/VideoLAN 2> /dev/null)" ]]; then
-			[[ ! "$PATH" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files (x86)/VideoLAN/VLC/vlc.exe"
+			[[ ! "${PATH}" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files (x86)/VideoLAN/VLC/vlc.exe"
 		elif [[ -n "$(ls /mnt/c/'Program Files'/VideoLAN 2> /dev/null)" ]]; then
-			[[ ! "$PATH" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files/VideoLAN/VLC/vlc.exe"
+			[[ ! "${PATH}" =~ /VideoLAN/VLC ]]; PATHVLC="/mnt/c/Program Files/VideoLAN/VLC/vlc.exe"
 		else
-			ErrorFunc4b 'Unable to Find VLC file Directory, Make Sure VLC is installed in "C:/Program Files" or in "C:/Program Files (x86)" directory'
+			err_func "4b" 'Unable to Find VLC file Directory, Make Sure VLC is installed in "C:/Program Files" or in "C:/Program Files (x86)" directory'
 			exit 2
 		fi
-		if [[ $server == "default" ]]; then
-			refSet="gogoplay1.com" # Required Incase of Needed Headers
-		else
-			refSet="$QualitySTREAM"
-		fi
-		setsid -f "$PATHVLC" --adaptive-use-access --http-referrer="$refSet" "$QualitySTREAM" >/dev/null 2>&1
+		setsid -f "${PATHVLC}" --adaptive-use-access --http-referrer="${refUrl}" "${get_dl_direct}" >/dev/null 2>&1
 	else
-		ErrorFunc3b "Invalid Player" >&2
+		err_func "3d" "Invalid Player" >&2
 		exit 2
 	fi
 }
 
-function WatchAnime(){
+function watch_anime_main(){
 	while true; do
-		WatchGetData
+		watch_get_data
 		clear
-		AnimePlaying=$(
-			echo "$QueryDetect" | \
-			sed -n "$SeriesSelected"p | \
+		anime_playing=$(
 			while read -r wiffles; do
-				if [[ ${#wiffles} -gt 47 ]]; then
-					echo "${wiffles:0:47}..${wiffles:(${#wiffles}-10):${#wiffles}}"
-				else 
-					echo "${wiffles}"
-				fi
-			done
+				[[ "${#wiffles}" -gt 47 ]] && echo "${wiffles:0:47}..${wiffles:(-10)}" || echo "${wiffles}"
+			done <<< "$(sed -n "${search_selected}"p <<< "$query_results")"
 		)
-		MainMenuMessage
-		echoterd "Now Playing: $AnimePlaying [$EpisodeSelected/$LastEpiList]"
-		NumberingFunc "1" "Next Episode"
-		NumberingFunc "2" "Back to Previous Episode"
-		NumberingFunc "3" "Select Episode"
-		NumberingFunc "4" "Search For Another Anime"
-		NumberingFunc "5" "Download Instead"
-		NumberingFunc "6" "Exit the Program"
-		read -rp "$(InputSign 'Pick a Number: ')" PickedSelected
-		while [[ $PickedSelected -gt 6 ]] || [[ $PickedSelected =~ [[:punct:]] ]]; do
-			ErrorFunc3a "Undefined Number Pick" >&2
-			read -rp "$(InputSign 'Pick a Number: ')" PickedSelected
-		done
-		case $PickedSelected in
+		_menu_message
+		echo_centered "Now Playing: ${anime_playing} [${epside_selected}/${latest_episode}]"
+		selections=(
+			"Re-Launch Episode Again"
+			"Next Episode"
+			"Back to Previous Episode"
+			"Select Episode"
+			"Search For Another Anime"
+			"Download Instead"
+			"Exit the Program"
+		)
+		echo -e "\n"
+		choose_from_menu "Pick based on your suit needs:" selected_choice "${selections[@]}"
+		case "${menu_result_menu}" in
+			0)
+				continue
+				info_func "${infowait[$(( RANDOM % ${#infowait[@]} ))]}"
+				;;
 			1)
-				EpisodeSelected=$((EpisodeSelected + 1))
+				if [[ ${epside_selected} =~ [0-9]*\.[0-9]* ]]; then
+					epside_selected="${epside_selected//.[0-9]*/}"
+				fi
+				epside_selected=$((epside_selected + 1))
+				unset get_dl_direct resp_url resp_json
+				info_func "${infowait[$(( RANDOM % ${#infowait[@]} ))]}"
 				;;
 			2)
-				EpisodeSelected=$((EpisodeSelected - 1))
+				if [[ ${epside_selected} =~ [0-9]*\.[0-9]* ]]; then
+					epside_selected="${epside_selected//.[0-9]*/}"
+				fi
+				epside_selected=$((epside_selected - 1))
+				unset get_dl_direct resp_url resp_json
+				info_func "${infowait[$(( RANDOM % ${#infowait[@]} ))]}"
 				;;
 			3)
-				unset EpisodeSelected
-				OverAllInputs
+				unset epside_selected get_dl_direct resp_url resp_json
+				main_inputs
 				continue
 				;;
 			4)
-				unset AnimeSearch SeriesSelected EpisodeSelected Fails
-				OverAllInputs
+				unset search_request search_selected epside_selected get_dl_direct resp_url resp_json
+				main_inputs
 				continue
 				;;
 			5)
-				unset WatchAnime
-				DownloadUtilityForRange
-				return
+				download_instead "${refUrl}" "${get_dl_direct}" "${get_dl_direct}"
 				;;
 			6)
 				exit 0
 				;;
-			esac
+		esac
 	done
 }
 
-#######################################
-#            Args Parsers             #
-#######################################
+function download_instead(){
+# "refUrl" "get_dl_direct" "FILEVIDNAME"
+	TimeStart=$(date +%s)
+	aria2c -x 2 -s 2 \
+		--console-log-level=error --referer="${1}" \
+		--check-certificate=false --download-result=hide \
+		--auto-save-interval=0 "${2}" \
+		-o "${3}"
+	echo
+	TimeElapse=$(date +%s)
+	info_func "Downloading Episode ${epside_selected} Done!!"
+	AdditionalInfoFunc "Took $(TimeTranslate $(( TimeElapse - TimeStart ))) to Finish"
+}
 
-function ParseArgs(){
-	while getopts ":dvbhVHDwi:s:e:q:m:t:p:" opt; do
+function range_download_handler(){
+	parse_hist "Download"
+	if [[ ${is_range} = "1" ]]; then
+		slice="$(tr '-' "\n" <<< "${epside_selected}")"
+		epislice_start="$(head -n 1 <<< "${slice}")"
+		epislice_end="$(tail -n 1 <<< "${slice}")"
+		unset slice; _menu_message
+		info_func "Checking Episodes, Please Wait..."
+		for (( i=epislice_start; i<=epislice_end; i++ )); do
+			craft_url "${i}"
+			test_page_check=$(curl -sL "${crafted_url_page}")
+			if [[ "${test_page_check}" == "404" ]]; then
+				err_func "2c" "Episode Not Found, Episode ${i}" >&2
+				exit 3
+			fi
+		done
+		for (( i=epislice_start; i<=epislice_end; i++ )); do
+			craft_url "${i}"
+			url_get_streams
+			server_selector "${base_streaming_url}"
+			if [[ ${server} == "1" ]]; then
+				server_fembed "${main_rink}"
+			elif [[ ${server} == "default" ]]; then
+				server_sbplay "${main_rink}"
+			else
+				err_func "2e" "Download Mode only Available in Default" >&2
+				exit 5
+			fi
+			download_instead "${refUrl}" "${get_dl_direct}" "${FILEVIDNAME}"
+		done
+	else
+		craft_url "${epside_selected}"
+		url_get_streams
+		server_selector "${base_streaming_url}"
+		if [[ ${server} == "1" ]]; then
+			server_fembed "${main_rink}"
+		elif [[ ${server} == "default" ]]; then
+			server_sbplay "${main_rink}"
+		else
+			err_func "2e" "Download Mode only Available in Default" >&2
+			exit 5
+		fi
+		download_instead "${refUrl}" "${get_dl_direct}" "${FILEVIDNAME}"
+	fi
+}
+
+function parse_hist(){
+	mode="${1}"
+	quality_picker_parse="${quality_picker:-High}"; quality_picker_parse="${quality_picker_parse^}"
+	series_name_parse=$(sed -n "${search_selected}"p <<< "$query_results")
+	echo "${series_name_parse}#${epside_selected}#${mode}#${quality_picker_parse}" >> "$HOME/.histemina"
+}
+
+function back_hist(){
+	unset search_request search_selected epside_selected
+	display_hist=$(grep -E 'Download|Watch' "$HOME/.histemina" | uniq | tac)
+	while read -r wiffles; do
+		[[ "${#wiffles}" -gt 47 ]] && echo "${wiffles:0:47}..${wiffles:(-10)}" || echo "${wiffles}"
+	done <<< "$(awk -F[#] '{print $1}' <<< "$display_hist")" | nl -w1 -s"+ " | \
+	printTable '+' "Num+Anime Name\n$(awk '{print $0}')"
+	read -rp "$(design_input 'Enter a Number: ')" selected_hist
+	while ! [[ ${selected_hist} =~ [0-9]* ]]; do
+		err_func "1a" "The input must be in Digit/Number" >&2
+		read -rp "$(design_input 'Enter a Number: ')" selected_hist
+	done 
+	parser_selected_hist=$(sed -n "${selected_hist}"p <<< "$display_hist")
+	search_request=$(awk -F[#] '{print $1}' <<< "${parser_selected_hist}")
+	epside_selected=$(awk -F[#] '{print $2}' <<< "${parser_selected_hist}")
+	Moode=$(awk -F[#] '{print $3}' <<< "${parser_selected_hist}")
+	quality_picker=$(awk -F[#] '{print $4}' <<< "${parser_selected_hist}")
+	search_selected="1"
+	if [[ ${Moode} == "Download" ]]; then
+		is_download="1"
+	fi
+}
+
+function mainFuncs(){
+	check_package tput aria2c awk grep sed curl bc nl
+	main_inputs
+	if [[ ${is_download} == "1" ]]; then
+		range_download_handler
+	else
+		watch_anime_main
+	fi
+}
+
+function arg_parser(){
+	check_configs
+	while getopts ":vhdVHbD-:s:e:q:t:p:" opt; do
 		case "${opt}" in
-			d)
-				if [[ $EUID -ne 0 ]]; then
-					ErrorFunc1g 'Give this script Sudo Permission to Delete files' >&2
-					InfoFunc "Run: sudo $(basename "$0") -d"
-					exit 7
-				fi
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				tput reset
-				FileDir="$(dirname "$(readlink -f "$0")")/$(basename "$0")"
-				rm "$FileDir"
-				rm -r /etc/emina
-				for barmod in $(seq 1 100); do
-					sleep 0.001
-					ProgressBarModifiedUnin "${barmod}" 100
-				done
-				printf '\n'
-				InfoFunc "Uninstalling Completed!"
+			v)
+				echo "v1.0.0"
 				exit 0
-				;;
-			w)
-				if [[ -z "$(command -v mpv; command -v vlc.exe)" ]]; then
-					ErrorFunc1b "MPV/VLC is not installed. MPV/VLC is needed for Playing Videos" >&2
-					ErrorHelp
-					exit 2
-				fi
-				WatchAnime="1"
 				;;
 			h)
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				ErrorHelp
+				show_help
 				exit 0
 				;;
-			V)
-				VidPlayer="vlc"
+			d)
+				is_download="1"
 				;;
-			b)
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				BacktoHist # <- this function used for continue'ing to where you left on
+			V)
+				vid_player="vlc"
 				;;
 			H)
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				ChopCharacters=$(
-					while read -r wiffles; do
-						wiffledF1=$(echo "$wiffles" | awk -F[#] '{print $1}')
-						wiffledF2=$(echo "$wiffles" | awk -F[#] '{print $2}')
-						wiffledF3=$(echo "$wiffles" | awk -F[#] '{print $3}')
-						wiffledF4=$(echo "$wiffles" | awk -F[#] '{print $4}')
-						if [[ "${#wiffledF1}" -gt 34 ]]; then
-							echo "${wiffledF1:0:34}..${wiffledF1:(${#wiffledF1}-10):${#wiffledF1}}#${wiffledF2}#${wiffledF3}#${wiffledF4}"
-						else 
-							echo "${wiffles}"
-						fi
-					done <<< "$(tac "$HOME/.histemina")"
-				)
-				echo "History File" | CenteredGrid
-				echo "This is where all your Recent Searches/Downloads Stored" | CenteredGrid
-				 printTable '#' "Anime#EP#Mode#Quality\n${ChopCharacters}" | CenteredGrid
+				CenteredGrid <<< "History File"
+				CenteredGrid <<< "This is where all your Recent Searches/Downloads Stored"
+				while read -r wiffles; do
+					wiffledF1=$(awk -F[#] '{print $1}' <<< "$wiffles")
+					wiffledF2=$(awk -F[#] '{print $2}' <<< "$wiffles")
+					wiffledF3=$(awk -F[#] '{print $3}' <<< "$wiffles")
+					wiffledF4=$(awk -F[#] '{print $4}' <<< "$wiffles")
+					[[ ${#wiffles} -gt 36 ]] && echo "${wiffledF1:0:34}..${wiffledF1: (-10)}#${wiffledF2}#${wiffledF3}#${wiffledF4}" || echo "${wiffles}"
+				done <<< "$(tac "$HOME/.histemina")" | \
+				printTable '#' "Anime#EP#Mode#Quality\n$(awk '{print $0}')"
 				exit 0
 				;;
 			D)
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
 				sed -i '/^/d' "$HOME/.histemina"
 				exit 0
 				;;
-			v)
-				unset modeload infarg AnimeSearch EpisodeSelected QualityPicker
-				echo "v0.7 (Stable Release)"
-				exit 0
+			b)
+				back_hist
 				;;
-			m)
-				modeload=${OPTARG}
-				case $modeload in
+			-)
+				case ${OPTARG} in
 					dub)
-						DUBMODE="1"
+						dub_mode="1"
 						;;
 					*)
-						ErrorFunc1f "Value was not Valid" >&2
-						ErrorHelp
-						exit 6
-				esac
-				;;
-			i)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc2f "Search Query Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
-					-*)
-						ErrorFunc3f "Search Query is Not Specified" >&2
-						ErrorHelp
-						exit 6
+						echo "Illegal Option"
+						exit 1
 						;;
-					*)
-						infarg=${OPTARG}
-						SearchArgsInf "$infarg"
-						;;
-				esac
-				exit 0
+					esac
 				;;
 			s)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc2f "Search Query Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
+				case "${OPTARG}" in
 					-*)
-						ErrorFunc3f "Search Query is Not Specified" >&2
-						ErrorHelp
+						err_func "3f" "Search Query is Not Specified" >&2
+						show_help
 						exit 6
 						;;
 					*)
-						AnimeSearch=${OPTARG}
+						search_request="${OPTARG}"
 						;;
 				esac
 				;;
 			e)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc3f "Episode Number Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
+				case "${OPTARG}" in
 					-*)
-						ErrorFunc3f "Episode Number is Not Specified" >&2
-						ErrorHelp
+						err_func "3f" "Episode Query is Not Specified" >&2
+						show_help
 						exit 6
 						;;
 					*)
-						EpisodeSelected=${OPTARG}
+						epside_selected="${OPTARG}"
 						;;
 				esac
 				;;
 			q)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc3f "Quality Value Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
-					high|High|low|Low)
-						QualityPicker=${OPTARG}
+				case "${OPTARG}" in
+					[h|H]igh|[N|n]ormal|[L|l]ow)
+						quality_picker="${OPTARG}"
 						;;
 					*)
-						ErrorFunc1f "${OPTARG} is a Invalid Quality"
-						ErrorHelp
+						err_func "3f" "${OPTARG} is an invalid Option" >&2
+						show_help
 						exit 6
 						;;
 				esac
 				;;
 			t)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc3f "Quality Value Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
-					default|1|2|3|4)
-						server=${OPTARG}
+				case "${OPTARG}" in
+					default|1)
+						server="${OPTARG}"
 						;;
 					*)
-						ErrorFunc1f "${OPTARG} is a Invalid Server Number" >&2
-						ErrorHelp
+						err_func "1f" "${OPTARG} is a Invalid Server Number" >&2
+						show_help
 						exit 6
 						;;
 				esac
 				;;
 			p)
-				if [[ ${OPTARG} == "" ]]; then
-					ErrorFunc3f "Selected Value Must not be empty" >&2
-					ErrorHelp
-					exit 6
-				fi
-				case $OPTARG in
+				case "${OPTARG}" in
 					[0-9]*)
-						SeriesSelected=${OPTARG}
+						search_selected="${OPTARG}"
 						;;
 					*)
-						ErrorFunc3a "${OPTARG} is Must be Number" >&2
-						ErrorHelp
+						err_func "1f" "${OPTARG} must be a Digit/Number" >&2
+						show_help
 						exit 1
 						;;
 				esac
 				;;
 			\?)
-				ErrorFunc4f "[ ${OPTARG}: is not valid Argument ]" >&2
-				ErrorHelp
+				err_func "4f" "[ ${OPTARG}: is not valid Argument ]" >&2
+				show_help
 				exit 6
 				;;
 			:)
-				ErrorFunc4f "[ -${OPTARG} Argument must have a Value ]" >&2
-				ErrorHelp
+				err_func "4f" "[ -${OPTARG} Argument must have a Value ]" >&2
+				show_help
 				exit 6
 				;;
 		esac
@@ -2051,64 +633,6 @@ function ParseArgs(){
 	shift $((OPTIND -1))
 }
 
-function ErrorHelp(){
-	echo -e 'Usage: emina-cli -i "<search query>"'
-	echo -e 'Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]'
-	echo -e 'Usage: emina-cli [arguments...]'
-	echo -e ''
-	echo -e "Program that allows you to download and watch anime via command line."
-	echo -e ''
-	echo -e "Options:"
-	echo -e "   -d\t\t\t\t: Uninstall Script with Config Files"
-	echo -e "   -v\t\t\t\t: Show the version of the script"
-	echo -e '   -m "[mode]"\t\t\t: Specify Mode'
-	echo -e '   -s "<search query>"\t\t: Search Anime'
-	echo -e '   -e "[episode]"\t\t: Number of Episode'
-	echo -e '   -q "[quality]"\t\t: Quality of Video'
-	echo -e '   -p "[number]"\t\t: Specify Picks in Anime Selection'
-	echo -e '   -t "[server]"\t\t: Specify Server (default, 1, 2, 3)'
-	echo -e "   -w\t\t\t\t: Switch to Watch Mode"
-	echo -e '   -V\t\t\t\t: Use VLC as Video Player (For Windows)'
-	echo -e "   -h\t\t\t\t: Show this help"
-	echo -e ''
-	echo -e "Misc:"
-	echo -e '   -i "<search query>"\t\t: Search Anime and Print Info'
-	echo -e '   -H\t\t\t\t: Print History File'
-	echo -e '   -D\t\t\t\t: Clear History File'
-	echo -e '   -b\t\t\t\t: Play Anime from History'
-	echo -e ''
-	printf 'You can change Servers or Download Method by changing the value of the "server or utility" variable in ' && tput setab 8 && printf '/etc/emina/down.conf' && tput sgr 0
-	echo -e ''
-	echo -e ''
-	printf 'Option "-d" is to Uninstall this Script with ' && tput setab 8 && printf '/etc/emina/down.conf & /etc/emina/eminavars' && tput sgr 0 && echo -e ' But it wont delete all the prerequisites/dependencies that installed by this script (it can be used for other scripts)..'
-	echo -e ''
-	echo 'Option "-t" will specify which server will used to download the File, if this argument presented it will ignore the Config File where the automation stored to set the server..'
-	echo -e ''
-	echo 'Option "-m [dub]" will change Mode, (Default: None).'
-	echo -e "\tdub\t\t: Switch to Dub Mode (Dubbed Anime Only)"
-	echo -e ''
-	echo 'Option "-q" flag is ignored when downloading Range of Episodes (Default: High)'
-	echo -e ''
-}
-
-#######################################
-#           Main Functions            #
-#######################################
-
-function MainFunction(){
-	OverAllInputs
-	DownloadUtilityForRange
-}
-
-if [[ -n $(command -v apt; command -v apt-get) ]]; then
-	InstallPrerequisitesDebBased
-	StallConfigs
-elif [[ -n $(command -v dnf; command -v yum) ]]; then
-	InstallPrerequisitesRedHatBased
-	StallConfigs
-else
-	StallConfigs
-	PackageChecks
-fi
-ParseArgs "$@"
-MainFunction
+check_configs
+arg_parser "$@"
+mainFuncs
