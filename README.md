@@ -16,11 +16,11 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 ## Installation
 Install Dependencies needed
 ```
-apt update -y
-apt install aria2 bc mpv -y
+sudo apt update -y
+sudo apt install aria2 bc coreutils make ncurses-utils -y
 ```
 
-Now Install it
+Now Download and Install
 ```
 ~# git clone https://github.com/TheGlockMisc/emina-cli.git
 ~# cd emina-cli
@@ -29,16 +29,15 @@ Now Install it
 ## Usage
 Its Simple..
 ```
-Usage: emina-cli -i "<search query>"
-Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" -m [Mode]
+Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" [--dub]
 Usage: emina-cli [arguments...]
 ```
 + Inputs
 
 | Inputs | Posible Values |
 | ------------- | ---------- |
-| Episode | All Episodes Possible, Special Episodes (Ex. 6.5), movie |
-| Quality | high (Leave it Blank), low |
+| Episode | All Episodes Possible, Special Episodes (Ex. 6.5) |
+| Quality | high, normal, low |
 
 ## Prerequisites 
 + *Grep*
@@ -88,7 +87,7 @@ Misc:
 | Server | default, 1 |
 | Video Player | mpv, vlc |
 | Default Quality | high , low |
-| Download Mode | 1 |
+| Download Mode | 1, 0 |
 
 + Bulk Downloads
 `Ex. [+] Episode: 1-7`
@@ -105,4 +104,7 @@ Misc:
 ```
 
 ## Bugs & Issues
-+ If You Found Some Bugs, Feel Free to Create a New Issue (PRs OPEN)
++ If you found some bugs, Feel Free to Create a New Issue (PRs OPEN)
+
+## For Android Users (Termux)
+[Click Here](https://github.com/TheGlockMisc/emina-cli/tree/emina-termux)
