@@ -515,7 +515,7 @@ function arg_parser(){
 	while getopts ":vhdHbD-:s:e:q:t:p:" opt; do
 		case "${opt}" in
 			v)
-				echo "v1.0.0"
+				echo "${_version_script}"
 				exit 0
 				;;
 			h)
