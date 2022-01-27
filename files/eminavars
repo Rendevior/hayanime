@@ -1,5 +1,6 @@
 #!/bin/bash
 
+_version_script="1.0.0"
 
 # This Functions Are Used for Emina-Cli
 # Do Not Edit if you don't know what you're doing. It may not work
