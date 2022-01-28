@@ -98,7 +98,7 @@ function show_help(){
 }
 
 infoarray[0]="It's so easy to use!"
-infoarray[1]="You can change Servers at /etc/emina/emina.conf"
+infoarray[1]="You can change Servers at /data/data/com.termux/files/home/etc/emina/emina.conf"
 infoarray[2]="Don't be Evil"
 infoarray[3]='Want Dub mode? Just add the "--dub" argument'
 infoarray[4]="Date now is: $(date)"
@@ -116,7 +116,7 @@ infowait[3]="Please Wait... Here it comes"
 function _menu_message(){
 	clear
 	tput setaf "$(( RANDOM % 231 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
-	echo_centered "Version: v1.0.0"
+	echo_centered "Version: ${_version_script}"
 	Text_Center "${infoarray[$(( RANDOM % ${#infoarray[@]} ))]}"
 	echo
 }
