@@ -117,7 +117,7 @@ infowait[3]="Please Wait... Here it comes"
 function _menu_message(){
 	clear
 	tput setaf "$(( RANDOM % 231 ))" && echo "$(Banner | CenteredGrid)" && tput sgr0
-	echo_centered "Version: v1.0.0"
+	echo_centered "Version: ${_version_script}"
 	Text_Center "${infoarray[$(( RANDOM % ${#infoarray[@]} ))]}"
 	echo
 }
