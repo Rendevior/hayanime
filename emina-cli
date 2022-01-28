@@ -118,11 +118,11 @@ function search_declare(){
 	if [[ ${dub_mode} == "1" ]]; then
 		query_results=$(
 			sed -n '/<div class="name">/,/./p' <<< "${index_search_result}" | \
-			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[d|D]ub/!d' | uniq)
+			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[D|d][U|u][B|b]/!d' | uniq)
 	else
 		query_results=$(
 			sed -n '/<div class="name">/,/./p' <<< "${index_search_result}" | \
-			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[d|D]ub/d' | uniq)
+			sed 's/^[[:space:]]*//g;s| Episode.*[0-9]*||g;/^<.*>/d;/[D|d][U|u][B|b]/d' | uniq)
 	fi
     if [[ $query_results = "" ]]; then
 		err_func "b1" "Seems Like No Anime Exist Based on Your Search, Try Again" >&2
