@@ -76,7 +76,7 @@ input_questions(){
 
 # Misc and Tools
 update_script(){
-	script_ind="$(curl -sL -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/main/hayanime")" || die "An error occured while retrieving from github"
+	script_ind="$(curl -sL -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	if [ -z "${script_ind}" ]; then
 		suc "Cool, Script is up to date!"
