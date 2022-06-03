@@ -13,4 +13,4 @@ jobs:
     - name: Run ShellCheck
       uses: ludeeus/action-shellcheck@master
       env:
-        SHELLCHECK_OPTS: -s sh -o all -e 2250
+        SHELLCHECK_OPTS: -s sh -o all -e SC2250 -e SC2249 -e SC2312
