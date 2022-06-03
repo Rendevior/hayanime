@@ -175,7 +175,7 @@ show_help(){
 }
 
 table_ui(){
-	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-26))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
+	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-9))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
 	printf "\n\033[48;5;66m%3s#%3s\033[0m\033[48;5;24m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;66m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
 		len="$((termcols - ${#line}))"
