@@ -1,110 +1,79 @@
 <div align="center">
-<h1>Emina-Cli <sup><sub><sup>v1.0.0</sup></sub></sup></h1>
+<h1>Haya<sup><sub><sup>早</sup></sub></sup>nime</h1>
 
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
 
-[![Main](https://img.shields.io/badge/Maintainer-TheGlockMisc-green?style=flat)](https://github.com/TheGlockMisc)
-[![Main](https://img.shields.io/badge/Maintainer-Zudeath-green?style=flat)](https://github.com/Zudeath)
-![Main](https://img.shields.io/badge/OS-Linux-blue?style=flat)
-![Main](https://img.shields.io/badge/OS-Windows-blue?style=flat)
-![Main](https://img.shields.io/badge/Status-Working-green?style=flat)
+[![Main](https://img.shields.io/badge/Maintainer-TheGlockMisc-green?style=flat-square)](https://github.com/TheGlockMisc)
+[![Main](https://img.shields.io/badge/Maintainer-Zudeath-green?style=flat-square)](https://github.com/Zudeath)
+![Main](https://img.shields.io/badge/OS-Linux-blue?style=flat-square)
+![Main](https://img.shields.io/badge/OS-Windows-blue?style=flat-square)
+![Main](https://img.shields.io/badge/OS-Android-blue?style=flat-square)
 
-[Watch Usage Demo Here](https://youtu.be/YkSA9CnnbzU)
+<img src="https://user-images.githubusercontent.com/93582751/171870808-f978af0b-1313-4cf7-9fff-51c2b258cf43.JPG" alt="Screnshot 1" width="50%" height="25%" /><img src="https://user-images.githubusercontent.com/93582751/171872397-d81828ad-8980-4fee-b66f-c74b555c9947.JPG" alt="Screnshot 2" width="50%" height="25%" />
+
 </div>
 
 ## Installation
 Install Dependencies needed
 ```
-sudo apt update -y
-sudo apt install aria2 bc coreutils make ncurses-utils -y
+apt update -y
+apt install aria2 -y
 ```
 
 Now Download and Install
 ```
-~# git clone https://github.com/TheGlockMisc/emina-cli.git
-~# cd emina-cli
-~# sudo make
+~# curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
+~# chmod +x "${PREFIX}/bin/hayanime"
 ```
 ## Usage
 Its Simple..
 ```
-Usage: emina-cli -s "<search query>" -e "[Episode]" -q "High" [--dub]
-Usage: emina-cli [arguments...]
+Usage:
+    hayanime [arguments...]
+    hayanime -v | -h
 ```
-+ Inputs
-
-| Inputs | Posible Values |
-| ------------- | ---------- |
-| Episode | All Episodes Possible, Special Episodes (Ex. 6.5) |
-| Quality | high, normal, low |
 
 ## Prerequisites 
-+ *Grep*
-+ *MPV* (For Linux Users)
-+ *VLC* (For Windows Users)
-+ *Aria2c*
-+ *Sed*
-+ *Awk*
++ Grep
++ MPV **(For Linux/Android Users)**
++ VLC **(For Windows Users)**
++ Aria2c
++ Sed
++ Awk
 ## Option / Args
 ```
-Options:
-   -v                          : Show the version of the script
-   -s "<search query>"         : Search Anime
-   -e "[episode]"              : Number of Episode
-   -q "[quality]"              : Quality of Video
-   -p "[number]"               : Specify Picks in Anime Selection
-   -t "[server]"               : Specify Server (default, 1)
-   -d                          : Switch to Download Mode
-   --dub.                      : Switch to Dub Mode
-   -V                          : Use VLC as Video Player (For Windows)
-   -h                          : Show this help
-
-Misc:
-   -H                          : Print History File
-   -D                          : Clear History File
-   -b                          : Play Anime from History
+ Options:
+    -q [low|normal|high]        : Choose specific quality                               
+    -s [default|(1-5)]          : Select server                                         
+    -p [vlc|built-in]           : Use specific video player (default: mpv)              
+    --dub                       : Watch Dubbed Anime                                    
+    -d                          : Download Mode                                         
+    -u                          : Update to the latest Version                          
+    -v                          : Print Version and Exit                                
+    -h                          : Print Help
 ```
 <details>
 <summary>Additional Infos...</summary>
  
-+ Option "-t" will specify which server will used to Stream/Download the file, if this argument presented it will ignore the Config File where the automation stored to set the server..
++ The quality selection on "-p built-in" is not available. (default: Auto)                Server Selection is optional, Server 1 is fast but most of the time                     it always break. Incase of the default ones is not working, please choose               the backup. Built-in video player is only for termux (Android) users.
 
-+ Option "--dub" will change Mode, (Default: None).
-    + dub                        : Switch to Dub Mode (Dubbed Anime Only)
+| Exit Codes: | Description |
+| ------- | -------- |
+| 0 | No Error |
+| 1 | An Error occured or the process was destructed by an Exception |
+| 2 | Exited using "Iterrupt"
 
-+ Option "-q" flag is ignored when downloading Range of Episodes (Default: High)
 </details>
 
 ## Features
-+ You can Change Servers and Other Automations to make your Life Easier
-```
-~# nano /etc/emina/down.conf
-```
++ Supported Special Episodes and Range
+`Ex. 6.5` | `Ex. 1-5`
 
-| Variable | Posible Values |
-| ------------- | ---------- |
-| Server | default, 1 |
-| Video Player | mpv, vlc |
-| Default Quality | high , low |
-| Download Mode | 1, 0 |
+*Other Features will be available near future.*
 
-+ Bulk Downloads
-`Ex. [+] Episode: 1-7`
-+ Supported Special Episodes
-`Ex. [+] Episode: 6.5`
-
-## What's New? (v1.0.0)
-```diff
-+ Fixed all Servers
-+ Stable Release
-+ Lightweight
-+ Improved Menu
-- Shrinks Dependencies
-```
+## License
+[GPL-3.0 license](https://github.com/TheGlockMisc/hayanime/blob/v2.0/LICENSE)
 
 ## Bugs & Issues
-+ If you found some bugs, Feel Free to Create a New Issue (PRs OPEN)
-
-## For Android Users (Termux)
-[Click Here](https://github.com/TheGlockMisc/emina-cli/tree/emina-termux)
++ If you found some bugs, feel free to create a New Issue (PRs OPEN)
