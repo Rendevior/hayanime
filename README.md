@@ -26,6 +26,21 @@ Now Download and Install
 ~# curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
 ~# chmod +x "${PREFIX}/bin/hayanime"
 ```
+Setup MPV (For Android Users)
+```
+~# termux-setup-storage
+~# curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
+~# chmod +x "$PREFIX/bin/mpv"
+
+> Open MPV app
+> Click 3 Dots at the top
+> Settings
+> Advanced
+> Edit mpv.conf
+> And insert this:
+include="/storage/emulated/0/mpv/mpv.tmp"
+> Click "Save"
+```
 ## Usage
 Its Simple..
 ```
