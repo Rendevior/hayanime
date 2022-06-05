@@ -58,6 +58,7 @@ err(){
 
 die(){
 	err "${1}"
+	save_terminal
 	exit 1
 }
 
@@ -80,9 +81,13 @@ update_script(){
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	if [ -z "${script_ind}" ]; then
 		suc "Cool, Script is up to date!"
+		save_terminal
+		exit 0
 	else
 		if printf '%s\n' "${script_ind}" | patch "${0}" - ; then
 			suc "Script has been sucessfully Updated, Enjoy!"
+			save_terminal
+			exit 0
 		else
 			die "Can't update, An Exception Occured."
 		fi
@@ -286,7 +291,7 @@ selector(){
 		read -r ani_selected
 	fi
 	ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '\[0-9]')"
-	if printf '%s' "${ani_selected}" | grep -q '^0'; then exit 0; fi
+	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
 	while [ "${ani_selected:-$((query_count + 2))}" -gt "${query_count}" ]; do
 		err "Exception: Entered Invalid"
 		input_questions 'Pick Here By Number: '
@@ -542,6 +547,7 @@ range_dl_handler(){
 		dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"
 		start_ep="$((start_ep + 1))"
 	done
+	save_terminal
 	exit 0
 }
 
@@ -568,7 +574,7 @@ main_exec(){
 
 # Arguments Parser
 arg_parser(){
-	while getopts ":vhdq:-:p:s:" opt; do
+	while getopts ":vhduq:-:p:s:" opt; do
 		case "${opt}" in
 			v)
 				printf '%s\n' "Version: ${VERSION}"
@@ -580,6 +586,9 @@ arg_parser(){
 				dep_check "aria2c"
 				download_mode="true"
 				server="fembed"	;;
+			u)
+				update_script
+				;;
 			-)
 				case "${OPTARG}" in
 					dub)
