@@ -17,8 +17,8 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 ## Installation
 Install Dependencies needed
 ```
-apt update -y
-apt install aria2 -y
+~# apt update -y && apt upgrade -y
+~# apt install aria2 -y
 ```
 
 Now Download and Install
@@ -71,7 +71,10 @@ Usage:
 <details>
 <summary>Additional Infos...</summary>
  
-+ The quality selection on "-p built-in" is not available. (default: Auto)                Server Selection is optional, Server 1 is fast but most of the time                     it always break. Incase of the default ones is not working, please choose               the backup. Built-in video player is only for termux (Android) users.
++ The quality selection on "-p built-in" is not available. (default: Auto)
++ Server Selection is optional, Server 1 is fast but most of the time it always break.
++ Incase of the default ones is not working, please choose the backup.
++ Built-in video player is only for termux (Android) users.
 
 | Exit Codes: | Description |
 | ------- | -------- |
