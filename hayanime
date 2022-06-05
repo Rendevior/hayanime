@@ -3,7 +3,7 @@
 # hayanime
 
 # Variables
-VERSION="v2.0.0"
+VERSION="v2.0.1"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
