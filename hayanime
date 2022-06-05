@@ -107,7 +107,7 @@ dep_check(){
 
 dl_manager(){
 	printf '%b' "\n"
-	aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate=false --download-result=hide --auto-save-interval=0 "${2}" -o "${3}"
+	aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
 	printf '%b\n' "\007"
 	suc "Downloading Episode ${epi_selected} Done!!"
 }
@@ -175,7 +175,7 @@ show_help(){
 }
 
 table_ui(){
-	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-9))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
+	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
 	printf "\n\033[48;5;66m%3s#%3s\033[0m\033[48;5;24m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;66m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
 		len="$((termcols - ${#line}))"
@@ -190,14 +190,14 @@ table_ui(){
 choose_from_menu() {
 	prompt="${1}"
 	shift 1
-	options="${*}" cur=0 index=0
+	options="${*}" cur="0" index="0"
 	count="$(printf '%s' "${options}" | awk 'END{print NR}')" 
 	up="$(printf '%b' "\033[A")" down="$(printf '%b' "\033[B")" escchar="$(printf '%b' "\033")" pgup="$(printf '%b' "\033[5~")" pgdn="$(printf '%b' "\033[6~")"
 	hideCursor
 	stty -echo -icanon min 1 time 0
 	printf '%b\n' "${prompt}"
 	while true; do
-		index=0 
+		index="0"
 		IFS='
 		'
 		for o in ${options}; do
@@ -545,6 +545,7 @@ main_exec(){
 		main_interface
 		range_dl_handler
 	else
+		[ "${player}" = "mpv" ] && dep_check "mpv"
 		loop
 	fi
 }
@@ -632,5 +633,5 @@ arg_parser(){
 
 # Call Functions
 arg_parser "${@}"
-dep_check "curl" "sed" "grep" "awk" "mpv" "base64" "od" "wc" "diff" "patch"
+dep_check "curl" "sed" "grep" "awk" "base64" "od" "wc" "diff" "patch"
 main_exec
