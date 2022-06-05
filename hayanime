@@ -3,7 +3,7 @@
 # hayanime
 
 # Variables
-VERSION="v2.0.1"
+VERSION="v2.0.0"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -401,7 +401,7 @@ streaming_url_server(){
 			main_streaming="$(printf '%s' "${1}" | base64 -d)"
 			cust_referer="${main_streaming}"
 			if printf '%s' "${main_streaming}" | grep -q 'ep\.[0-9]*\.[0-9]*\.m3u8'; then
-				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s_.m3u8$_.${qualvidman}.m3u8_g")"
+				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s/.m3u8$/.${qualvidman}.m3u8/g")"
 			fi
 			;;
 		# Main Server
@@ -411,7 +411,7 @@ streaming_url_server(){
 			main_streaming="$(curl -s -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			if printf '%s' "${main_streaming}" | grep -q 'ep\.[0-9]*\.[0-9]*\.m3u8'; then
-				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s_.m3u8$_.${qualvidman}.m3u8_g")"
+				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s/.m3u8$/.${qualvidman}.m3u8/g")"
 			fi
 			;;
 	esac
