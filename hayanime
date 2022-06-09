@@ -3,7 +3,7 @@
 # hayanime
 
 # Variables
-VERSION="v2.0.1"
+VERSION="v2.0.2"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -84,7 +84,7 @@ update_script(){
 		save_terminal
 		exit 0
 	else
-		if printf '%s\n' "${script_ind}" | patch "${0}" - ; then
+		if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
 			suc "Script has been sucessfully Updated, Enjoy!"
 			save_terminal
 			exit 0
@@ -380,10 +380,10 @@ streaming_url_server(){
 			;;
 		dood)
 			[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
-			cust_referer="dood.sh"
+			cust_referer="dood.to"
 			dood_id="$(curl -sL "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
-			dood_path="$(curl -A "${user_agent}" -s "https://dood.sh/d/${dood_id}" | sed -nE 's/<a href="(.*)" class="btn.*justify.*/\1/p')"
-			main_streaming="$(curl -A "${user_agent}" -s "https://dood.sh${dood_path}" | sed -nE "s_.*window.open.*'(.*)',.*_\1_p")"
+			dood_path="$(curl -A "${user_agent}" -s "https://dood.to/d/${dood_id}" | sed -nE 's/<a href="(.*)" class="btn.*justify.*/\1/p')"
+			main_streaming="$(curl -A "${user_agent}" -s "https://dood.to${dood_path}" | sed -nE "s_.*window.open.*'(.*)',.*_\1_p")"
 			;;
 		mpup)
 			[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
