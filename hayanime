@@ -3,7 +3,7 @@
 # hayanime
 
 # Variables
-VERSION="v2.0.3"
+VERSION="v2.0.4"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -309,7 +309,7 @@ epi_counter(){
 episode_selector(){
 	epi_counter "${anime_selected}"
 	if [ -z "${epi_selected}" ]; then
-		[ "${epi_total}" = '1' ] && printf '%s\n' "Feat: Autoselect when only one episode exist" && epi_selected="1"
+		[ "${epi_total}" = '1' ] && inf "Feat: Autoselect when only one episode exist" && epi_selected="1"
 		[ -z "${epi_selected}" ] && input_questions "Episode [1-${epi_total}]: " && read -r epi_selected
 	fi
 	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '\[0-9]\.\-')"
@@ -336,22 +336,24 @@ qualitypicker(){
 
 # Scraper & Streams
 id_grepper(){
-	if printf '%s' "${epi_selected}" | grep '[0-9]*\.[0-9]' >/dev/null 2>&1; then
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+	if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]'; then
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	else
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
 	[ -z "${idserv}" ] && die "Exception: Not Found"
 	if printf '%s' "${idserv}" | grep -q 'id='; then
-		idserv="${idserv##*=}"
+		idserv="${idserv##*id=}"
 	elif printf '%s' "${idserv}" | grep -q 'player.html#'; then
 		idserv="${idserv##*\#}" server="defdir"
-	elif printf '%s' "${idserv}" | grep -q '/videoembed/'; then
+	elif printf '%s' "${idserv}" | grep -q 'ed/video/'; then
 		idserv="${idserv##*/}" server="daily"
-	elif printf '%s' "${idserv}" | grep -q '/video/'; then
+	elif printf '%s' "${idserv}" | grep -q 'com/video/'; then
+		idserv="${idserv##*/}" server="vim"
+	elif printf '%s' "${idserv}" | grep -q '/videoembed/'; then
 		idserv="${idserv##*/}" server="ok" player="mpv"
 	else
-		die "Failed to get Anime ID"
+		die "Unknown Anime ID was received"
 	fi
 }
 
@@ -368,7 +370,7 @@ streaming_url_server(){
 			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362/616e696d646c616e696d646c7c7c363136653639366436343663363136653639366436343663376337633631366536393664363436633631366536393664363436633763376336313665363936643634366336313665363936643634366337633763373337343732363536313664373336327c7c616e696d646c616e696d646c7c7c73747265616d7362"
 			for try_sources in sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
 				main_streaming="$(curl -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's/.*file":"(.*)","cdn.*/\1/p')"
-				if printf '%s' "${main_streaming}" | grep -q "client=" >/dev/null 2>&1; then
+				if printf '%s' "${main_streaming}" | grep -q "client="; then
 				break
 				fi
 			done
@@ -397,9 +399,18 @@ streaming_url_server(){
 			main_streaming="$(curl -sL "https://www.dailymotion.com/player/metadata/video/${1}" -e "${cust_referer}" | sed -E 's_.*x-mpegURL","url":"(.+?)"}].*_\1_;s_[\]__g')"
 			;;
 		ok)
-			[ "${player}" = "built-in" ] && player="mpv"
+			[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
 			cust_referer="ok.ru"
 			main_streaming="$(curl -sL "https://ok.ru/videoembed/${1}" | sed -nE 's_.*data-module="OKVideo".*data-options="(.*)".*data-player-container-id.*_\1_p' | sed -E 's_\\u0026_\&_g;s_&quot\;_\x22_g;s_[\]__g;s_.*(https://.*videoPlayerCdn[^\x22\x27<>]*).*_\1_')"
+			;;
+		vim)
+			cust_referer="vimeo.com"
+			[ "${qualvidman}" = "480" ] && qualvidman="520"
+			vim_index="$(curl -sL "https://player.vimeo.com/video/${1}" | grep -oE '"progressive":.*\[\{(.*?)\}\]\}')"
+			for qualvid in ${qualvidman} 1080 720 520 360; do
+				main_streaming="$(printf '%s' "${vim_index}" | sed -nE -e 's_\},\{_}\n{_g' -e 's_.*profile.*url":"([^\"]*)".*quality.*'"\"${qualvid}p\"".*'_\1_p')"
+				[ -n "${main_streaming}" ] && break
+			done
 			;;
 		# Catch Direct
 		defdir)
@@ -476,13 +487,13 @@ Download Episode"
 			0)
 				continue	;;
 			1)
-				if printf '%s' "${epi_selected}" | grep '[0-9]*\.[0-9]*' >/dev/null 2>&1; then
+				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected + 1))
 				unset main_streaming encodeb64 idserv	;;
 			2)
-				if printf '%s' "${epi_selected}" | grep '[0-9]*\.[0-9]*' >/dev/null 2>&1; then
+				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected - 1))
