@@ -3,7 +3,7 @@
 # hayanime
 
 # Variables
-VERSION="v2.0.3"
+VERSION="v2.0.4"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -337,18 +337,20 @@ qualitypicker(){
 # Scraper & Streams
 id_grepper(){
 	if printf '%s' "${epi_selected}" | grep '[0-9]*\.[0-9]' >/dev/null 2>&1; then
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	else
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
 	[ -z "${idserv}" ] && die "Exception: Not Found"
 	if printf '%s' "${idserv}" | grep -q 'id='; then
-		idserv="${idserv##*=}"
+		idserv="${idserv##*id=}"
 	elif printf '%s' "${idserv}" | grep -q 'player.html#'; then
 		idserv="${idserv##*\#}" server="defdir"
-	elif printf '%s' "${idserv}" | grep -q '/videoembed/'; then
+	elif printf '%s' "${idserv}" | grep -q 'ed/video/'; then
 		idserv="${idserv##*/}" server="daily"
-	elif printf '%s' "${idserv}" | grep -q '/video/'; then
+	elif printf '%s' "${idserv}" | grep -q 'com/video/'; then
+		idserv="${idserv##*/}" server="vim"
+	elif printf '%s' "${idserv}" | grep -q '/videoembed/'; then
 		idserv="${idserv##*/}" server="ok" player="mpv"
 	else
 		die "Failed to get Anime ID"
@@ -397,9 +399,18 @@ streaming_url_server(){
 			main_streaming="$(curl -sL "https://www.dailymotion.com/player/metadata/video/${1}" -e "${cust_referer}" | sed -E 's_.*x-mpegURL","url":"(.+?)"}].*_\1_;s_[\]__g')"
 			;;
 		ok)
-			[ "${player}" = "built-in" ] && player="mpv"
+			[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
 			cust_referer="ok.ru"
 			main_streaming="$(curl -sL "https://ok.ru/videoembed/${1}" | sed -nE 's_.*data-module="OKVideo".*data-options="(.*)".*data-player-container-id.*_\1_p' | sed -E 's_\\u0026_\&_g;s_&quot\;_\x22_g;s_[\]__g;s_.*(https://.*videoPlayerCdn[^\x22\x27<>]*).*_\1_')"
+			;;
+		vim)
+			cust_referer="vimeo.com"
+			[ "${qualvidman}" = "480" ] && qualvidman="520"
+			vim_index="$(curl -sL "https://player.vimeo.com/video/${1}" | grep -oE '"progressive":.*\[\{(.*?)\}\]\}')"
+			for qualvid in ${qualvidman} 1080 720 520 360; do
+				main_streaming="$(printf '%s' "${vim_index}" | sed -nE -e 's_\},\{_}\n{_g' -e 's_.*profile.*url":"([^\"]*)".*quality.*'"\"${qualvid}p\"".*'_\1_p')"
+				[ -n "${main_streaming}" ] && break
+			done
 			;;
 		# Catch Direct
 		defdir)
