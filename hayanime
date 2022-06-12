@@ -1,9 +1,10 @@
 #!/bin/sh
 
 # hayanime
+OWNPID="${$}"
 
 # Variables
-VERSION="v2.0.4"
+VERSION="v2.0.5"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -181,14 +182,14 @@ show_help(){
 
 table_ui(){
 	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
-	printf "\n\033[48;5;66m%3s#%3s\033[0m\033[48;5;24m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;66m%2sReleased%1s\033[0m\n"
+	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
 		len="$((termcols - ${#line}))"
 		printf "\033[48;5;236m%s%${len}s\033[0m" "${line}"
 	done <<-EOF
 	${data}
 	EOF
-	printf "\033[48;5;66m%7s\033[0m\033[48;5;24m%$((termcols - 18))s\033[0m\033[48;5;66m%11s\033[0m\n\n"
+	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
 	unset data line len
 }
 
@@ -214,7 +215,7 @@ choose_from_menu() {
 			index="$(( index + 1 ))"
 		done
 		IFS="${defifs}"
-		key=$(dd bs=10 count=1 2>/dev/null)
+		key="$(dd bs=10 count=1 2>/dev/null)" || kill -9 "${OWNPID}" && die "Process Died"
 		case "${key}" in
 			"${up}"|w|W)
 				cur="$(( cur - 1 ))"
@@ -468,7 +469,7 @@ launch_vid(){
 # Loops and Handlers
 loop(){
 	main_interface
-	while :; do
+	while ps -p "${OWNPID}" >/dev/null; do
 		main
 		launch_vid
 		main_interface
@@ -483,6 +484,7 @@ Select Episode
 Search For Another Anime
 Change Quality
 Download Episode"
+		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
 				continue	;;
@@ -536,6 +538,7 @@ Download Episode"
 				esac
 				range_dl_handler	;;
 		esac
+		unset menu_result_menu
 	done
 }
 
