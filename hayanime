@@ -488,7 +488,7 @@ Download Episode"
 		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
-				kill -9 "${OWNPID}"
+				kill -9 "${OWNPID}" >/dev/null 2>&1
 				die	;;
 			1)
 				continue	;;
