@@ -4,7 +4,7 @@
 OWNPID="${$}"
 
 # Variables
-VERSION="v2.0.5"
+VERSION="v2.0.6"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -20,7 +20,7 @@ server="default"
 download_mode="false"
 
 # PATH env for VLC
-export PATH="${PATH}:/mnt/c/Program Files/VideoLAN/VLC:/mnt/c/Program Files (x86)/VideoLAN/VLC"
+export PATH="${PATH}:/mnt/c/Program Files/VideoLAN/VLC:/mnt/c/Program Files (x86)/VideoLAN/VLC:/c/Program Files/VideoLAN/VLC:/c/Program Files (x86)/VideoLAN/VLC"
 
 # Receive Terminal Signal
 trap "save_terminal && printf '%b' '\n' && exit 2" INT HUP
@@ -215,7 +215,7 @@ choose_from_menu() {
 			index="$(( index + 1 ))"
 		done
 		IFS="${defifs}"
-		key="$(dd bs=10 count=1 2>/dev/null)" || kill -9 "${OWNPID}" && die "Process Died"
+		key="$(dd bs=10 count=1 2>/dev/null)"
 		case "${key}" in
 			"${up}"|w|W)
 				cur="$(( cur - 1 ))"
@@ -246,8 +246,8 @@ choose_from_menu() {
 				EOF
 				read -r ar && printf '%s' "${ar}" >/dev/null && unset ar
 				# Sanitize Terminal
-				sanitize_terminal "8" "8"
-				[ "${count}" -le "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((count-9))B"
+				sanitize_terminal "9" "10"
+				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
 				;;
 			"${pgup}")
 				cur="0"
@@ -477,7 +477,8 @@ loop(){
 		formatter_title="Now Playing: \033[4m\033[48;5;240m${trunc_aniname}\033[0m [${epi_selected}/${epi_total}]"
 		printf "%*b\n\n" "$(((${#formatter_title}+termcols+8)/2))" "${formatter_title}"
 		inf "Press H to show keybindings..."
-		choose_from_menu "Pick based on your suit needs:" "Relaunch Episode Again
+		choose_from_menu "Pick based on your suit needs:" "Exit This Program
+Relaunch Episode Again
 Next Episode
 Back to Previous Episode
 Select Episode
@@ -487,28 +488,31 @@ Download Episode"
 		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
-				continue	;;
+				kill -9 "${OWNPID}"
+				die	;;
 			1)
+				continue	;;
+			2)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected + 1))
 				unset main_streaming encodeb64 idserv	;;
-			2)
+			3)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected - 1))
 				unset main_streaming encodeb64 idserv	;;
-			3)
+			4)
 				unset epi_selected main_streaming encodeb64 idserv
 				main_interface
 				continue	;;
-			4)
+			5)
 				unset ani_searched epi_selected ani_selected qual_stream main_streaming encodeb64 idserv
 				main_interface
 				continue	;;
-			5)
+			6)
 				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 				choose_from_menu "\nPick and change your quality:" "High (1080p/Auto)
 				Normal (720p)
@@ -522,7 +526,7 @@ Download Episode"
 						qual_stream="low"	;;
 				esac
 				continue	;;
-			6)
+			7)
 				dep_check "aria2c"
 				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 				choose_from_menu "\nWhat server do you want to use?:" "Server 1 (Recommended)
