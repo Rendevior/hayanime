@@ -1,10 +1,25 @@
 #!/bin/sh
 
 # hayanime
-OWNPID="${$}"
+# Easy and Lightweight Program that lets you watch anime without interruptions.
+#
+# Author: TheGlockMisc
+# Date: November 23, 2021
+# License: GPL-3.0
+#
+# Github: https://github.com/TheGlockMisc/hayanime
+#
+# DISCLAIMER
+# I don't own or manage any server on the internet that scrapes by this tool,
+# and i'm not reponsible of any illegal uses of this tool.
+# this tool is for educational purposes only. Use at your own Risk
+#
+
+
+VERSION="v2.1.0"
 
 # Variables
-VERSION="v2.0.6"
+OWNPID="${$}"
 search_base_api="https://v1.nmtvjxdtx42qdwktdxjfoikjq.workers.dev/"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -98,14 +113,24 @@ update_script(){
 dep_check(){
 	for deppack; do
 		if ! command -v "${deppack}" >/dev/null ; then
-			if [ "${deppack}" = "xdg-open" ]; then
-				err "Built-in player is only for Android Users"
-			else
-				err "Program \"${deppack}\" not found. Please install it."
-			fi
-			[ "${deppack}" = "aria2c" ] && err "To install aria2c, Type <your_package_manager> aria2"
-			[ "${deppack}" = "vlc.exe" ] && err "Set the absolute path of vlc.exe in your \"\$PATH\" Environment Variable"
-			[ "${deppack}" = "mpv" ] && inf "[Note: For Android Users Only] Please run this to use mpv-android:" && suc "curl -sL -o \$PREFIX/bin/mpv \"https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv\" && chmod +x \$PREFIX/bin/mpv\n" && inf "For LINUX users:" && suc "sudo <your_package_manager> mpv"
+			[ "${deppack}" = "xdg-open" ] || err "Program \"${deppack}\" is not installed."
+			case "${deppack}" in
+				aria2c)
+					err "To install aria2c, Type <your_package_manager> aria2"
+					;;
+				vlc.exe)
+					err "Set the absolute path of vlc.exe in your \"\$PATH\" Environment Variable"
+					;;
+				mpv)
+					inf "[Note: For Android Users Only] Please run this to use mpv-android:"
+					suc "curl -sL -o \"\${PREFIX}/bin/mpv\" \"https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv\" && chmod +x \"\${PREFIX}/bin/mpv\""
+					inf "For LINUX users:"
+					suc "sudo <your_package_manager> mpv"
+					;;
+				xdg-open)
+					err "Built-in player is only for Android Users"
+					;;
+			esac
 			exit 1
 		fi
 	done
@@ -113,9 +138,44 @@ dep_check(){
 
 dl_manager(){
 	printf '%b' "\n"
-	aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
+	case "${2}" in
+		*m3u8*|*master*|*manifest*)
+			dep_check "ffmpeg"
+			ffmpeg -loglevel error -stats -referer "${1}" -i "${2}" -c copy "${3}"
+			;;
+		*)
+			dep_check "aria2c"
+			aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
+			;;
+	esac
 	printf '%b\n' "\007"
 	suc "Downloading Episode ${epi_selected} Done!!"
+}
+
+hist_handler(){
+	if [ "${1}" = "append" ]; then
+		[ -w ~/.hayanihist ] || die "Hist file is Unwritable, Make sure you have access to write to HOME directory"
+		sed -i "/${3}/d" ~/.hayanihist
+		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
+		unset path
+	else
+		main_interface
+		hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | uniq | head -n "${hist_limt:-25}")"
+		[ -z "${hist_data}" ] && die "History File is Empty, Watch anime first"
+		table_ui_hist "${hist_data}"
+		input_questions "Pick a Number: "
+		read -r hist_picked
+		hist_picked="$(printf '%s' "${hist_picked}" | tr -dc '0-9')"
+		[ -z "${hist_picked}" ] && die
+		if printf '%s' "${hist_picked}" | grep -q '^0'; then save_terminal && exit 0; fi
+		# Assign the Infos by declaring
+		hist_data="$(printf '%s' "${hist_data}" | sed -n "${hist_picked}"p)"
+		query_result="${hist_data%%¢*}#"
+		ani_searched="$(printf '%s' "${hist_data}" | sed -E 's_.*¢(.*)€.*_\1_g')"
+		ani_selected="1" qual_stream="high" query_count="1"
+		epi_selected="$(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g')"
+		player="${hist_data##*£}" 
+	fi
 }
 
 
@@ -146,11 +206,22 @@ main_interface(){
 	printf '%b' "\n"
 }
 
+show_aniinf(){
+	while IFS= read -r line; do
+		printf "\033[38;5;144m%*s\033[0m\n" "$(((${#line}+termcols)/2))" "${line}"
+	done <<-EOF
+	
+	Anime Infos:
+	${1}
+	
+	EOF
+}
+
 show_help(){
 	while IFS= read -r line; do
 		printf "%b\n" "${line}"
 	done <<-EOF
-	Program that lets you watch anime without interruptions.
+	Easy and Lightweight Program that lets you watch anime without interruptions.
 	
 	 Usage:
 	    ${0##*/} <args>
@@ -162,6 +233,8 @@ show_help(){
 	    -p [vlc|built-in]\t\t: Use specific video player (default: mpv)
 	    --dub\t\t\t: Watch Dubbed Anime
 	    -d\t\t\t\t: Download Mode
+	    -H\t\t\t\t: Play Anime from History
+	    --hist-limit=[n]\t\t: Limit the number of choices to be showed up in stdout (default: 25)
 	    -u\t\t\t\t: Update to the latest Version
 	    -v\t\t\t\t: Print Version and Exit
 	    -h\t\t\t\t: Print Help
@@ -193,7 +266,20 @@ table_ui(){
 	unset data line len
 }
 
-choose_from_menu() {
+table_ui_hist(){
+	data="$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
+	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
+	while IFS= read -r line; do
+		len="$((termcols - ${#line}))"
+		printf "\033[48;5;236m%s%${len}s\033[0m" "${line}"
+	done <<-EOF
+	${data}
+	EOF
+	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
+	unset data line len
+}
+
+choose_from_menu(){
 	prompt="${1}"
 	shift 1
 	options="${*}" cur="0" index="0"
@@ -276,7 +362,7 @@ search(){
 }
 
 result_searched(){
-	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}&origin=1&root=animixplay.to" | tr -d "\\\\" | grep -oP 'name.*?a href="([^"]*)".*?title="([^"]*)".*?(Released: [0-9]*|\&nbsp;)' | sed -E 's_\&nbsp\;_Released: ????_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.([0-9]*|\?{4}).*_\1\#\2 €\3_')"
+	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}&origin=1&root=animixplay.to" | tr -d "\\\\" | grep -oP 'name.*?a href="([^"]*)".*?title="([^"]*)".*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die "Exception: No Results Found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
@@ -291,19 +377,20 @@ selector(){
 		input_questions 'Pick Here By Number: '
 		read -r ani_selected
 	fi
-	ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '\[0-9]')"
-	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
+	ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	while [ "${ani_selected:-$((query_count + 2))}" -gt "${query_count}" ]; do
-		err "Exception: Entered Invalid"
+		err "Out of Bounds... Pick between 1-${query_count}, or type 0 to exit."
 		input_questions 'Pick Here By Number: '
 		read -r ani_selected
 	done
+	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
 	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s_(.*)#.*_${base_url}\1_")"
 }
 
 epi_counter(){
 	epilist_index=$(curl -sLk "${1}" -A "${user_agent}" | sed -n '/<div id="epslistplace" style="display:none">/,/<\/div>/p' | sed -E 's_"ep0"_"-1"_g')
-	epi_total=$(printf '%s' "${epilist_index}" | tr -d '\[\]' | grep -oP '"eptotal":(.*?),' | tr -dc '\[0-9]')
+	epi_total=$(printf '%s' "${epilist_index}" | tr -d '\[\]' | grep -oP '"eptotal":(.*?),' | tr -dc '0-9')
+	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre: \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 	[ -z "${epi_total}" ] && die "Exception: Anime is Not released yet, Or your IP is Blocked"
 }
 
@@ -311,18 +398,20 @@ episode_selector(){
 	epi_counter "${anime_selected}"
 	if [ -z "${epi_selected}" ]; then
 		[ "${epi_total}" = '1' ] && inf "Feat: Autoselect when only one episode exist" && epi_selected="1"
+		show_aniinf "${aniinf}"
 		[ -z "${epi_selected}" ] && input_questions "Episode [1-${epi_total}]: " && read -r epi_selected
 	fi
-	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '\[0-9]\.\-')"
+	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 	epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	while [ "${epi_whole:-$((epi_total + 2))}" -gt "${epi_total}" ]; do
 		err "Exception: Episode does not Exist"
 		input_questions "Episode [1-${epi_total}]: "
 		read -r epi_selected
-		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '\[0-9]\.\-')"
+		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 		epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	done
-	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E 's_https://animixplay.to/v1/__g;s_-_ _g;s/\b(.)/\u\1/g')"
+	[ "${download_mode}" = "true" ] || epi_selected="${epi_selected##*-}"
+	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E 's_https://animixplay.to/v1/__g;s_-_ _g;s_\b(.)_\u\1_g')"
 	file_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s_https://animixplay.to/v1/__g;s_\$_-episode-${epi_selected}_g").mp4"
 	title_crafted="$(printf '%s %s' "${anime_name_crafted}" "Episode ${epi_selected}" )"
 }
@@ -343,34 +432,40 @@ id_grepper(){
 		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
 	[ -z "${idserv}" ] && die "Exception: Not Found"
-	if printf '%s' "${idserv}" | grep -q 'id='; then
-		idserv="${idserv##*id=}"
-	elif printf '%s' "${idserv}" | grep -q 'player.html#'; then
-		idserv="${idserv##*\#}" server="defdir"
-	elif printf '%s' "${idserv}" | grep -q 'ed/video/'; then
-		idserv="${idserv##*/}" server="daily"
-	elif printf '%s' "${idserv}" | grep -q 'com/video/'; then
-		idserv="${idserv##*/}" server="vim"
-	elif printf '%s' "${idserv}" | grep -q '/videoembed/'; then
-		idserv="${idserv##*/}" server="ok" player="mpv"
-	else
-		die "Unknown Anime ID was received"
-	fi
+	case "${idserv}" in
+		*id=*)	idserv="${idserv##*id=}"	;;
+		*player.html#*)	idserv="${idserv##*\#}" server="defdir"	;;
+		*ed/video/*)	idserv="${idserv##*/}" server="daily"	;;
+		*com/video/*)	idserv="${idserv##*/}" server="vim"	;;
+		*/videoembed/*)	idserv="${idserv##*/}" server="ok" player="mpv"	;;
+		*)	die "Unknown Anime ID returned, please report this bug in Github."	;;
+	esac
 }
 
 streaming_url_server(){
-	case ${server:-default} in
+	case "${server:=default}" in
+		sb|dood|mpup)
+			if [ "${download_mode}" != "true" ]; then
+				[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
+			fi
+			;;
+		ok)
+			if [ "${download_mode}" != "true" ]; then
+				[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
+			fi
+			;;
+	esac
+	case "${server:=default}" in
 		gogo)
 			cust_referer="gogoanime.fi"
 			main_streaming="$(curl -sL "${base_url_ani}/player/v1.php?id=${1}" | sed -nE 's_.*file:."([^"]*)".*_\1_p')"
 			;;
 		sb)
-			[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
 			cust_referer="sbplay2.com"
 			sb_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/StreamSB/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/(.*)_\1_' | tr -d '\n' | od -A n -t x1 | tr -d " |\n")"
 			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362/616e696d646c616e696d646c7c7c363136653639366436343663363136653639366436343663376337633631366536393664363436633631366536393664363436633763376336313665363936643634366336313665363936643634366337633763373337343732363536313664373336327c7c616e696d646c616e696d646c7c7c73747265616d7362"
 			for try_sources in sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
-				main_streaming="$(curl -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's/.*file":"(.*)","cdn.*/\1/p')"
+				main_streaming="$(curl -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
 				if printf '%s' "${main_streaming}" | grep -q "client="; then
 				break
 				fi
@@ -382,14 +477,12 @@ streaming_url_server(){
 			main_streaming="$(curl -sL -X POST "${fm_url}" -e "${fm_url}" | sed -E 's_\{"file_\n\{"file_g' | sed -E "/${qualvidman}p/"'!d'';s_.*file.*(https.*?)\x22,.*label.*_\1_;s_[\]__g')"
 			;;
 		dood)
-			[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
 			cust_referer="dood.to"
 			dood_id="$(curl -sL "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
-			dood_path="$(curl -A "${user_agent}" -s "https://dood.to/d/${dood_id}" --doh-url "https://1.1.1.1/dns-query" | sed -nE 's/<a href="(.*)" class="btn.*justify.*/\1/p')"
+			dood_path="$(curl -A "${user_agent}" -s "https://dood.to/d/${dood_id}" --doh-url "https://1.1.1.1/dns-query" | sed -nE 's_<a href="(.*)" class="btn.*justify.*_\1_p')"
 			main_streaming="$(curl -A "${user_agent}" -s "https://dood.to${dood_path}" --doh-url "https://1.1.1.1/dns-query" | sed -nE "s_.*window.open.*'(.*)',.*_\1_p")"
 			;;
 		mpup)
-			[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
 			mpupurl="$(curl -sL "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
 			main_streaming="$(curl -sLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
 			cust_referer="${main_streaming}"
@@ -400,7 +493,6 @@ streaming_url_server(){
 			main_streaming="$(curl -sL "https://www.dailymotion.com/player/metadata/video/${1}" -e "${cust_referer}" | sed -E 's_.*x-mpegURL","url":"(.+?)"}].*_\1_;s_[\]__g')"
 			;;
 		ok)
-			[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
 			cust_referer="ok.ru"
 			main_streaming="$(curl -sL "https://ok.ru/videoembed/${1}" | sed -nE 's_.*data-module="OKVideo".*data-options="(.*)".*data-player-container-id.*_\1_p' | sed -E 's_\\u0026_\&_g;s_&quot\;_\x22_g;s_[\]__g;s_.*(https://.*videoPlayerCdn[^\x22\x27<>]*).*_\1_')"
 			;;
@@ -428,7 +520,7 @@ streaming_url_server(){
 			main_streaming="$(curl -s -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			if printf '%s' "${main_streaming}" | grep -q 'ep\.[0-9]*\.[0-9]*\.m3u8'; then
-				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s/.m3u8$/.${qualvidman}.m3u8/g")"
+				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s_.m3u8\$_.${qualvidman}.m3u8_g")"
 			fi
 			;;
 	esac
@@ -439,13 +531,16 @@ quality_selector(){
 	case ${qual_stream:-high} in
 		normal|Normal|n|N|720)
 			qualvidman="720"
-			qualvid="1"	;;
+			qualvid="1"
+			;;
 		worst|low|Low|l|L|480)
 			qualvidman="480"
-			qualvid="3"	;;
+			qualvid="3"
+			;;
 		high|High|H|h|best|1080|*)
 			qualvidman="1080"
-			qualvid="auto"	;;
+			qualvid="auto"
+			;;
 	esac
 }
 
@@ -473,6 +568,7 @@ loop(){
 		main
 		launch_vid
 		main_interface
+		hist_handler "append" "${anime_selected}" "${anime_name_crafted}" "${epi_selected}" "${player}"
 		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-20))}/ s_(.{$((termcols-29))}).*(.{7}\$)_\\1...\\2_g")"
 		formatter_title="Now Playing: \033[4m\033[48;5;240m${trunc_aniname}\033[0m [${epi_selected}/${epi_total}]"
 		printf "%*b\n\n" "$(((${#formatter_title}+termcols+8)/2))" "${formatter_title}"
@@ -488,59 +584,70 @@ Download Episode"
 		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
-				kill -9 "${OWNPID}" >/dev/null 2>&1
-				die	;;
+				die
+				;;
 			1)
-				continue	;;
+				continue
+				;;
 			2)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected + 1))
-				unset main_streaming encodeb64 idserv	;;
+				unset main_streaming encodeb64 idserv
+				;;
 			3)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
 					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
 				fi
 				epi_selected=$((epi_selected - 1))
-				unset main_streaming encodeb64 idserv	;;
+				unset main_streaming encodeb64 idserv
+				;;
 			4)
 				unset epi_selected main_streaming encodeb64 idserv
 				main_interface
-				continue	;;
+				continue
+				;;
 			5)
 				unset ani_searched epi_selected ani_selected qual_stream main_streaming encodeb64 idserv
 				main_interface
-				continue	;;
+				continue
+				;;
 			6)
 				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 				choose_from_menu "\nPick and change your quality:" "High (1080p/Auto)
 				Normal (720p)
 				Low (480p)"
 				case "${menu_result_menu}" in
-					0)
-						qual_stream="high"	;;
-					1)
-						qual_stream="normal"	;;
-					2)
-						qual_stream="low"	;;
+					0)	qual_stream="high"	;;
+					1)	qual_stream="normal"	;;
+					2)	qual_stream="low"	;;
 				esac
-				continue	;;
+				continue
+				;;
 			7)
-				dep_check "aria2c"
-				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
-				choose_from_menu "\nWhat server do you want to use?:" "Server 1 (Recommended)
-				Server 2
-				Server 3"
+				choose_from_menu "\nWhat server do you want to use?:" "Current Server
+				Server 1 (Recommended | mp4)
+				Server 2 (mp4)
+				Server 3 (mp4)
+				Server 4 (m3u8)
+				Server 5 (m3u8)"
 				case "${menu_result_menu}" in
-					0)
-						server="fembed"	;;
-					1)
-						server="dood"	;;
-					2)
-						server="mpup"	;;
+					0)	curserv="true" && dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"	;;
+					1)	server="mpup"	;;
+					2)	server="dood"	;;
+					3)	server="fembed"	;;
+					4)	server="default"	;;
+					5)	server="gogo"	;;
 				esac
-				range_dl_handler	;;
+				download_mode="true"
+				if [ "${curserv}" = "true" ]; then
+					die
+				else
+					unset menu_result_menu qual_stream main_streaming encodeb64 idserv
+					range_dl_handler
+				fi
+				;;
 		esac
 		unset menu_result_menu
 	done
@@ -576,6 +683,7 @@ main(){
 	selector
 	episode_selector
 	qualitypicker
+	inf "[!] Please Wait... Processing"
 	id_grepper
 }
 
@@ -592,81 +700,67 @@ main_exec(){
 
 # Arguments Parser
 arg_parser(){
-	while getopts ":vhduq:-:p:s:" opt; do
+	while getopts ":vhduHq:-:p:s:" opt; do
 		case "${opt}" in
 			v)
 				printf '%s\n' "Version: ${VERSION}"
-				exit 0	;;
+				exit 0
+				;;
 			h)
 				show_help
-				exit 0	;;
+				exit 0
+				;;
 			d)
-				dep_check "aria2c"
 				download_mode="true"
-				server="fembed"	;;
+				;;
 			u)
 				update_script
 				;;
+			H)
+				hist_handler
+				;;
 			-)
 				case "${OPTARG}" in
-					dub)
-						dub_mode="true"	;;
-					help)
-						show_help
-						exit 0	;;
+					dub)	dub_mode="true"	;;
+					help)	show_help && exit 0	;;
+					*hist-limit*)	hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"	;;
 					*)
 						err "Exception: Illegal Option"
 						show_help
-						exit 1	;;
-				esac	;;
+						exit 1
+						;;
+				esac
+				;;
 			q)
-				qual_stream="${OPTARG}"	;;
+				qual_stream="${OPTARG}"
+				;;
 			p)
 				case "${OPTARG}" in
-					built-in|builtin)
-						dep_check "xdg-open"
-						player="built-in"	;;
-					vlc)
-						dep_check "vlc.exe"
-						player="vlc"	;;
-					mpv)
-						player="mpv"	;;
-					*)
-						err "\"${OPTARG}\" is not valid Value"
-						show_help
-						exit 1 ;;
+					built-in|builtin)	dep_check "xdg-open" && player="built-in"	;;
+					vlc)	dep_check "vlc.exe" && player="vlc"	;;
+					*)	player="mpv"	;;
 					esac
 				;;
 			s)
 				case "${OPTARG}" in
-					1)
-						server="gogo"	;;
-					2)
-						server="sb"
-						player="${player:-mpv}"	;;
-					3)
-						server="fembed"	;;
-					4)
-						server="dood"
-						player="${player:-mpv}"	;;
-					5)
-						server="mpup"
-						player="${player:-mpv}"	;;
-					default)
-						server="default"	;;
-					*)
-						err "\"${OPTARG}\" is not valid Value"
-						show_help
-						exit 1 ;;
-				esac	;;
+					1)	server="gogo"	;;
+					2)	server="sb"	;;
+					3)	server="fembed"	;;
+					4)	server="dood"	;;
+					5)	server="mpup"	;;
+					*)	server="default"	;;
+				esac
+				;;
 			\?)
-				err "[ -${OPTARG}: is not valid Argument ]"
+				err "[-${OPTARG}]: is not valid Argument"
 				show_help
-				exit 1	;;
+				exit 1
+				;;
 			:)
-				err "[ -${OPTARG}: Argument must have a Value ]"
+				err "[-${OPTARG}]: Argument must have a Value"
 				show_help
-				exit 1	;;
+				exit 1
+				;;
 		esac
 	done
 	shift $((OPTIND -1))
