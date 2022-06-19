@@ -161,11 +161,18 @@ hist_handler(){
 	else
 		main_interface
 		hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | uniq | head -n "${hist_limt:-25}")"
-		[ -z "${hist_data}" ] && die "History File is Empty, Watch anime first"
+		hist_count="$(printf '%s' "${hist_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
+		[ "${hist_count}" = "0" ] && die "History File is Empty, Watch anime first"
 		table_ui_hist "${hist_data}"
 		input_questions "Pick a Number: "
 		read -r hist_picked
 		hist_picked="$(printf '%s' "${hist_picked}" | tr -dc '0-9')"
+		while [ "${hist_picked:-$((hist_count + 2))}" -gt "${hist_count}" ]; do
+			err "Out of Bounds... Pick between 1-${hist_count}, or type 0 to exit."
+			input_questions 'Pick a Number: '
+			read -r hist_picked
+			hist_picked="$(printf '%s' "${hist_picked}" | tr -dc '0-9')"
+		done
 		[ -z "${hist_picked}" ] && die
 		if printf '%s' "${hist_picked}" | grep -q '^0'; then save_terminal && exit 0; fi
 		# Assign the Infos by declaring
@@ -176,6 +183,11 @@ hist_handler(){
 		epi_selected="$(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g')"
 		player="${hist_data##*£}" 
 	fi
+}
+
+idx_comp(){
+	stream_ind="$(curl -sL "${1}" | grep '#EXT-X-STREAM-INF')"
+	qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qualvidman}" | cut -d':' -f 1)"
 }
 
 
@@ -509,9 +521,6 @@ streaming_url_server(){
 		defdir)
 			main_streaming="$(printf '%s' "${1}" | base64 -d)"
 			cust_referer="${main_streaming}"
-			if printf '%s' "${main_streaming}" | grep -q 'ep\.[0-9]*\.[0-9]*\.m3u8'; then
-				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s/.m3u8$/.${qualvidman}.m3u8/g")"
-			fi
 			;;
 		# Main Server
 		default|*)
@@ -519,9 +528,6 @@ streaming_url_server(){
 			col_craft_st1="$(printf '%s%s%s' "${1}" "LTXs3GrU8we9O" "${encodeb64}" | base64)"
 			main_streaming="$(curl -s -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
-			if printf '%s' "${main_streaming}" | grep -q 'ep\.[0-9]*\.[0-9]*\.m3u8'; then
-				[ "${qual_stream}" = "high" ] || main_streaming="$(printf '%s' "${main_streaming}" | sed "s_.m3u8\$_.${qualvidman}.m3u8_g")"
-			fi
 			;;
 	esac
 	[ -z "${main_streaming}" ] && die "Exception: Failed to retrieve streams"
@@ -531,15 +537,12 @@ quality_selector(){
 	case ${qual_stream:-high} in
 		normal|Normal|n|N|720)
 			qualvidman="720"
-			qualvid="1"
 			;;
-		worst|low|Low|l|L|480)
-			qualvidman="480"
-			qualvid="3"
+		worst|low|Low|l|L|360)
+			qualvidman="360"
 			;;
 		high|High|H|h|best|1080|*)
 			qualvidman="1080"
-			qualvid="auto"
 			;;
 	esac
 }
@@ -555,7 +558,8 @@ launch_vid(){
 			nohup vlc.exe "${main_streaming}" --http-user-agent="${user_agent}" --http-referrer="${cust_referer}" --meta-title="${title_crafted}" > /dev/null 2>&1 &
 			;;
 		mpv|*)
-			nohup mpv "${main_streaming}" --save-position-on-quit --media-title="${title_crafted}" --referrer="${cust_referer}" --vid="${qualvid}" --user-agent="${user_agent}" --tls-verify="no" > /dev/null 2>&1 &
+			idx_comp "${main_streaming}"
+			nohup mpv "${main_streaming}" --save-position-on-quit --media-title="${title_crafted}" --referrer="${cust_referer}" --vid="${qualvid:-auto}" --user-agent="${user_agent}" --tls-verify="no" > /dev/null 2>&1 &
 			;;
 	esac
 }
@@ -574,13 +578,13 @@ loop(){
 		printf "%*b\n\n" "$(((${#formatter_title}+termcols+8)/2))" "${formatter_title}"
 		inf "Press H to show keybindings..."
 		choose_from_menu "Pick based on your suit needs:" "Exit This Program
-Relaunch Episode Again
-Next Episode
-Back to Previous Episode
-Select Episode
-Search For Another Anime
-Change Quality
-Download Episode"
+		Relaunch Episode Again
+		Next Episode
+		Back to Previous Episode
+		Select Episode
+		Search For Another Anime
+		Change Quality
+		Download Episode"
 		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
