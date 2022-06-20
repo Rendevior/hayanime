@@ -140,15 +140,21 @@ dl_manager(){
 			dep_check "ffmpeg"
 			idx_comp "${2}"
 			ffmpeg -loglevel error -stats -referer "${1}" -i "${2}" -map "0:a:$((${qualvid:-1}-1))" -map "0:v:$((${qualvid:-1}-1))" -c copy "${3}"
+			xco="${?}"
 			;;
 		*)
 			dep_check "aria2c"
 			printf '%b' "\n"
 			aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
+			xco="${?}"
 			;;
 	esac
 	printf '%b\n' "\007"
-	[ "${?}" = "0" ] && suc "Downloading Episode ${epi_selected} Done!!" || err "Downloading Episode ${epi_selected} Failed..."
+	if [ "${xco}" = "0" ]; then
+		suc "Downloading Episode ${epi_selected} Done!!"
+	else
+		err "Downloading Episode ${epi_selected} Failed..."
+	fi
 }
 
 hist_handler(){
