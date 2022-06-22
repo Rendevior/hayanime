@@ -10,27 +10,27 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 ![Main](https://img.shields.io/badge/OS-Windows-blue?style=flat-square)
 ![Main](https://img.shields.io/badge/OS-Android-blue?style=flat-square)
 
-<img src="https://user-images.githubusercontent.com/93582751/171870808-f978af0b-1313-4cf7-9fff-51c2b258cf43.JPG" alt="Screnshot 1" width="50%" height="25%" /><img src="https://user-images.githubusercontent.com/93582751/171872397-d81828ad-8980-4fee-b66f-c74b555c9947.JPG" alt="Screnshot 2" width="50%" height="25%" />
+https://user-images.githubusercontent.com/93582751/174440162-86fe9078-678c-46f4-ba56-19cffb8d8cc2.mp4
 
 </div>
 
 ## Installation
+### Android (Termux)
 Install Dependencies needed
 ```
-~# apt update -y && apt upgrade -y
-~# apt install aria2 -y
+pkg up
+apt install aria2 ffmpeg -y
 ```
 
 Now Download and Install
 ```
-~# curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
-~# chmod +x "${PREFIX}/bin/hayanime"
+curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
+chmod +x "${PREFIX}/bin/hayanime"
 ```
-Setup MPV (For Android Users)
+Setup MPV (For Android Users | Optional)
 ```
-~# termux-setup-storage
-~# curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
-~# chmod +x "$PREFIX/bin/mpv"
+curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
+chmod +x "$PREFIX/bin/mpv"
 
 > Open MPV app
 > Click 3 Dots at the top
@@ -41,6 +41,32 @@ Setup MPV (For Android Users)
 include="/storage/emulated/0/mpv/mpv.tmp"
 > Click "Save"
 ```
+### Windows (Gitbash)
+
+• Install Gitbash [here](https://git-scm.com/download/win)<br>
+• Run "Gitbash" as Administrator
+
+Now Download and Install
+```
+curl -sL -o "/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
+chmod +x "/bin/hayanime"
+```
+
+### Linux
+
+Install Dependencies needed
+```
+sudo <your-package-manager> aria2
+sudo <your-package-manager> ffmpeg
+sudo <your-package-manager> mpv
+```
+
+Download and Install
+```
+curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
+chmod +x "${PREFIX}/bin/hayanime"
+```
+
 ## Usage
 Its Simple..
 ```
@@ -53,7 +79,7 @@ Usage:
 + Grep
 + MPV **(For Linux/Android Users)**
 + VLC **(For Windows Users)**
-+ Aria2c
++ Aria2c & FFmpeg (For Downloading)
 + Sed
 + Awk
 ## Option / Args
@@ -63,7 +89,9 @@ Usage:
     -s [default|(1-5)]          : Select server                                         
     -p [vlc|built-in]           : Use specific video player (default: mpv)              
     --dub                       : Watch Dubbed Anime                                    
-    -d                          : Download Mode                                         
+    -d                          : Download Mode             
+    -H                          : Play Anime from History
+    --hist-limit=[n]            : Limit the number of choices to be showed up in stdout (default: 25)
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
@@ -71,10 +99,7 @@ Usage:
 <details>
 <summary>Additional Infos...</summary>
  
-+ The quality selection on "-p built-in" is not available. (default: Auto)
-+ Server Selection is optional, Server 1 is fast but most of the time it always break.
-+ Incase of the default ones is not working, please choose the backup.
-+ Built-in video player is only for termux (Android) users.
++ The quality selection on "-p built-in" is not available. (default: Auto)                Server Selection is optional, Server 1 is fast but most of the time                     it always break. Incase of the default ones is not working, please choose               the backup. Built-in video player is only for termux (Android) users.
 
 | Exit Codes: | Description |
 | ------- | -------- |
@@ -91,7 +116,7 @@ Usage:
 *Other Features will be available near future.*
 
 ## License
-[GPL-3.0 license](https://github.com/TheGlockMisc/hayanime/blob/v2.0/LICENSE)
+[GPL-3.0 license](https://github.com/TheGlockMisc/hayanime/blob/master/LICENSE)
 
 ## Bugs & Issues
 + If you found some bugs, feel free to create a New Issue (PRs OPEN)
