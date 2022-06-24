@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.1.0"
+VERSION="v2.1.1"
 
 # Variables
 OWNPID="${$}"
@@ -54,7 +54,6 @@ trap "save_terminal && printf '%b' '\n' && exit 2" INT HUP
 
 # Terminal States
 save_terminal(){
-	killall -9 dd 2>/dev/null   # Kill "dd" commmand if its running background
 	printf "\033[?25h"	# Show Cursor
 	printf "\033[0m"	# Normal State of Colors
 	stty "${saveterm}"	# Rollback stty settings
@@ -149,7 +148,7 @@ dep_check(){
 
 dl_manager(){
 	case "${2}" in
-		*m3u8*|*master*|*manifest*)
+		*master.m3u8*|*m3u8*|*manifest*)
 			dep_check "ffmpeg"
 			idx_comp "${2}"
 			ffmpeg -loglevel error -stats -referer "${1}" -i "${2}" -map "0:a:$((${qualvid:-1}-1))" -map "0:v:$((${qualvid:-1}-1))" -c copy "${3}"
@@ -434,8 +433,8 @@ epi_counter(){
 episode_selector(){
 	epi_counter "${anime_selected}"
 	if [ -z "${epi_selected}" ]; then
-		[ "${epi_total}" = '1' ] && inf "Feat: Autoselect when only one episode exist" && epi_selected="1"
 		show_aniinf "${aniinf}"
+		[ "${epi_total}" = '1' ] && inf "Feat: Autoselect when only one episode exist" && epi_selected="1"
 		[ -z "${epi_selected}" ] && input_questions "Episode [1-${epi_total}]: " && read -r epi_selected
 	fi
 	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
@@ -525,6 +524,9 @@ streaming_url_server(){
 			sleep 1.5
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(date +%s)"
 			main_streaming="$(curl -A "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
+			if printf '%s' "${main_streaming}" | grep -qE '[c|C]loudflare'; then
+				unset main_streaming
+			fi
 			;;
 		mpup)
 			mpupurl="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
@@ -543,11 +545,7 @@ streaming_url_server(){
 		vim)
 			cust_referer="vimeo.com"
 			[ "${qualvidman}" = "480" ] && qualvidman="520"
-			vim_index="$(curl -skL "https://player.vimeo.com/video/${1}" | grep -oE '"progressive":.*\[\{(.*?)\}\]\}')"
-			for qualvid in ${qualvidman} 1080 720 520 360; do
-				main_streaming="$(printf '%s' "${vim_index}" | sed -nE -e 's_\},\{_}\n{_g' -e 's_.*profile.*url":"([^\"]*)".*quality.*'"\"${qualvid}p\"".*'_\1_p')"
-				[ -n "${main_streaming}" ] && break
-			done
+			main_streaming="$(curl -skL "https://player.vimeo.com/video/${1}" | sed -nE 's_.*\{"akfire\_interconnect\_quic":\{"url":"([^\"]*)","origin":"gcs","avc\_url":"[^\"]*".*fastly\_skyfire":\{"url":"([^\"]*)".*_\1\n\2_p' | tail -n 1)"
 			;;
 		# Catch Direct
 		defdir)
@@ -801,7 +799,7 @@ arg_parser(){
 				;;
 		esac
 	done
-	shift $((OPTIND -1))
+	shift "$((OPTIND -1))"
 }
 
 
