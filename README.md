@@ -79,7 +79,7 @@ Sample Input:
 
 To make your life easier, and save your option
 ```
-echo 'hayanime <your options>' >> ~/.bashrc
+echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 ```
 
 ## Prerequisites 
