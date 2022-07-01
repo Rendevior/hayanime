@@ -56,9 +56,7 @@ chmod +x "/bin/hayanime"
 
 Install Dependencies needed
 ```
-sudo <your-package-manager> aria2
-sudo <your-package-manager> ffmpeg
-sudo <your-package-manager> mpv
+sudo <your-package-manager> aria2 ffmpeg mpv
 ```
 
 Download and Install
@@ -71,17 +69,27 @@ chmod +x "${PREFIX}/bin/hayanime"
 Its Simple..
 ```
 Usage:
-    hayanime [arguments...]
-    hayanime -v | -h
+    hayanime -s "<server>" -q "<quality>" -p "<player>" [--dub] [anime]
+    hayanime -H -s "<server>" [--hist-limit="n"]
+    hayanime -v | -h | -D | -u
+    
+Sample Input:
+    hayanime -s 1 -q high -p vlc One Piece
+```
+
+To make your life easier, and save your option
+```
+echo 'hayanime <your options>' >> ~/.bashrc
 ```
 
 ## Prerequisites 
-+ Grep
++ GREP
++ CURL
 + MPV **(For Linux/Android Users)**
 + VLC **(For Windows Users)**
 + Aria2c & FFmpeg (For Downloading)
-+ Sed
-+ Awk
++ SED
++ AWK
 ## Option / Args
 ```
  Options:
@@ -91,18 +99,26 @@ Usage:
     --dub                       : Watch Dubbed Anime                                    
     -d                          : Download Mode             
     -H                          : Play Anime from History
-    --hist-limit=[n]            : Limit the number of choices to be showed up in stdout (default: 25)
+    -D                          : Reset History File
+    --hist-limit=[n]            : Limit the number of history choices to be showed up in stdout (default: 25)
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
 ```
 <details>
-<summary>Additional Infos...</summary>
- 
-+ The quality selection on "-p built-in" is not available. (default: Auto)                Server Selection is optional, Server 1 is fast but most of the time                     it always break. Incase of the default ones is not working, please choose               the backup. Built-in video player is only for termux (Android) users.
+<summary>Additional Infos...</summary><br>
+
++ The quality selection on `-p built-in` is not available. (default: Auto)
++ Server Selection is optional, Server 1 is fast but most of the time                     it always break
++ Incase of the default ones is not working, please choose the backup.
++ Built-in video player is only for termux (Android) users.
+
+Vibration/Notification Signal, you can identify it when:
+- `1 Vibration/s` : Something succeeds without errors
+- `2 Vibration/s` : An error or something was failed
 
 | Exit Codes: | Description |
-| ------- | -------- |
+| ------- | ------- |
 | 0 | No Error |
 | 1 | An Error occured or the process was destructed by an Exception |
 | 2 | Exited using "Iterrupt"
@@ -112,6 +128,17 @@ Usage:
 ## Features
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
+
++ History Paging<br>
+`next` — to go to the next page<br>
+`prev` — to go to the previous page
+
++ Keybindings on Picker<br>
+   - `Q` or `ESC`		: Exit
+   - `W` or `Button UP`		: to go up
+   - `S` or `Button Down`	: to go down
+   - `PGUP`			: to go to the First Choice
+   - `PGDN`			: to go to the Last Choice
 
 *Other Features will be available near future.*
 
