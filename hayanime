@@ -14,13 +14,14 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.1.1"
+VERSION="v2.2.0"
 
 # Variables
 OWNPID="${$}"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
 base_url_go="https://goload.pro"
+search_base_api="https://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
 user_agent='Mozilla/5.0 (Linux; Android 8.1.0; vivo 1801) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/10.2 Chrome/71.0.3578.99 Mobile Safari/537.36'
 termcols="$(stty size)" termcols="${termcols##* }"
 currtrunc="$(printf '%s' "${PWD:=$(pwd)}" | sed -E 's_(.{10}).*(.{20})_\1...\2_g')"
@@ -30,20 +31,6 @@ defifs="${IFS}"
 player="mpv"
 server="default"
 download_mode="false"
-
-# Dynamic search APIs (for stability)
-sear_hash="ic5qwh28vwloyjo28qtg
-w0ltfgqz8y3ygjozgs4v
-nmtvjxdtx42qdwktdxjfoikjq
-2snpxh6dqulm1c0ppnivgzdt
-gykngaxzenja64nweh3a2kz2
-bgmvcle5cq9kjycjokrtwii9e
-ij7p9towl8uj4qafsopjtrjk
-6kdst8yelac6xagbyeuspg7ua"
-rand_num="$(awk -v min=1 -v max=8 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')"
-rand_mizer="$(printf '%s' "${sear_hash}" | sed -n "${rand_num}p")"
-search_base_api="https://v1.${rand_mizer}.workers.dev/"
-unset rand_num rand_mizer sear_hash
 
 # PATH env for VLC
 export PATH="${PATH}:/mnt/c/Program Files/VideoLAN/VLC:/mnt/c/Program Files (x86)/VideoLAN/VLC:/c/Program Files/VideoLAN/VLC:/c/Program Files (x86)/VideoLAN/VLC"
@@ -79,13 +66,13 @@ showCursor(){
 
 # Color Processors
 err(){
-	printf "\033[38;5;1m%b\033[0m\n" "${1}" >&2
+	[ -n "${1}" ] && printf "\033[38;5;1m%b\007\007\033[0m\n" "${1}" >&2
 }
 
 die(){
-	err "${1}"
+	err "${2}"
 	save_terminal
-	exit 1
+	exit "${1}"
 }
 
 inf(){
@@ -103,19 +90,18 @@ input_questions(){
 
 # Misc and Tools
 update_script(){
-	script_ind="$(curl -sL -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "An error occured while retrieving from github"
+	script_ind="$(curl -sL -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "1" "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	if [ -z "${script_ind}" ]; then
 		suc "Cool, Script is up to date!"
-		save_terminal
-		exit 0
+		die "0"
 	else
 		if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
+			printf '%b' "\007"
 			suc "Script has been sucessfully Updated, Enjoy!"
-			save_terminal
-			exit 0
+			die "0"
 		else
-			die "Can't update, An Exception Occured."
+			die "1" "Can't update, An Exception Occured. Or it might be can't write the update to file (Make sure you run it as an Administrator/Sudo user)"
 		fi
 	fi
 }
@@ -126,10 +112,10 @@ dep_check(){
 			[ "${deppack}" = "xdg-open" ] || err "Program \"${deppack}\" is not installed."
 			case "${deppack}" in
 				aria2c)
-					err "To install aria2c, Type <your_package_manager> aria2"
+					inf "To install aria2c, Type <your_package_manager> aria2"
 					;;
 				vlc.exe)
-					err "Set the absolute path of vlc.exe in your \"\$PATH\" Environment Variable"
+					inf "Set the absolute path of vlc.exe in your \"\$PATH\" Environment Variable"
 					;;
 				mpv)
 					inf "[Note: For Android Users Only] Please run this to use mpv-android:"
@@ -151,18 +137,18 @@ dl_manager(){
 		*master.m3u8*|*m3u8*|*manifest*)
 			dep_check "ffmpeg"
 			idx_comp "${2}"
-			ffmpeg -loglevel error -stats -referer "${1}" -i "${2}" -map "0:a:$((${qualvid:-1}-1))" -map "0:v:$((${qualvid:-1}-1))" -c copy "${3}"
+			ffmpeg -err_detect ignore_err -loglevel error -stats -user_agent "${user_agent}" -referer "${1}" -i "${2}" -map "0:v:$((${qualvid:-1}-1))" -map "0:a:$((${qualvid:-1}-1))" -c copy "${3}"
 			xco="${?}"
 			;;
 		*)
 			dep_check "aria2c"
 			printf '%b' "\n"
-			aria2c -x 5 -s 5 --console-log-level=error --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
+			aria2c -x 5 -s 5 --console-log-level="error" --user-agent="${user_agent}" --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
 			xco="${?}"
 			;;
 	esac
-	printf '%b\n' "\007"
 	if [ "${xco}" = "0" ]; then
+		printf '%b\n' "\007"
 		suc "Downloading Episode ${epi_selected} Done!!"
 	else
 		err "Downloading Episode ${epi_selected} Failed..."
@@ -172,34 +158,87 @@ dl_manager(){
 hist_handler(){
 	[ -e ~/.hayanihist ] || touch ~/.hayanihist 2>/dev/null		# Supress Incase of the Directory is Unwritable
 	if [ "${1}" = "append" ]; then
-		[ -w ~/.hayanihist ] || die "Hist file is Unwritable, Make sure you have access to write to HOME directory"
+		[ -w ~/.hayanihist ] || die "1" "Hist file is Unwritable, Make sure you have access to write to HOME directory"
 		sed -i "/${3}/d" ~/.hayanihist
 		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
-		unset path
 	else
-		main_interface
-		hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | uniq | head -n "${hist_limt:-25}")"
-		hist_count="$(printf '%s' "${hist_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
-		[ "${hist_count}" = "0" ] && die "History File is Empty, Watch anime first"
-		table_ui_hist "${hist_data}"
-		input_questions "Pick a Number: "
-		read -r hist_picked
-		hist_picked="$(printf '%s' "${hist_picked}" | tr -dc '0-9')"
-		while [ "${hist_picked:-$((hist_count + 2))}" -gt "${hist_count}" ]; do
-			err "Out of Bounds... Pick between 1-${hist_count}, or type 0 to exit."
-			input_questions 'Pick a Number: '
+		hist_limt="${hist_limt:-15}"
+		hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
+		while true; do
+			main_interface
+			case "${hist_picked}" in
+				[Nn]ext|[Pp]rev|[Bb]ack)
+					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
+					;;
+				*)
+					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | head -n "${hist_limt}")"
+					;;
+			esac
+			hist_count="${hist_count_or}"
+			hist_count_persi="$(printf '%s' "${hist_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
+			unset pages_total
+			while true; do
+				: "$((hist_count -= hist_limt))"
+				: "$((pages_total += 1))"
+				[ -z "${hist_count%%-*}" ] && break
+			done
+			[ "${hist_count_persi}" = "0" ] && die "1" "History File is Empty, Watch anime first"
+			table_ui_hist "${hist_data}"
+			input_questions "Pick a Number: "
 			read -r hist_picked
-			hist_picked="$(printf '%s' "${hist_picked}" | tr -dc '0-9')"
+			while true; do
+				case "${hist_picked}" in
+					[0-9]*)
+						if [ "${hist_picked:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
+							err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
+							input_questions 'Pick a Number: '
+							read -r hist_picked
+						else
+							break
+						fi
+						;;
+					[Nn]ext|[Pp]rev|[Bb]ack)
+						break
+						;;
+					*)
+						err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
+						input_questions 'Pick a Number: '
+						read -r hist_picked
+						;;
+				esac
+			done
+			case "${hist_picked}" in
+				[Nn]ext)
+					if [ "${cur_page_hist}" -ge "${pages_total}" ]; then 
+						err "Theres no next page"
+						sleep 0.5
+					else
+						: "$((page_comp += hist_limt))"
+						: "$((cur_page_hist += 1))"
+					fi
+					;;
+				[Pp]rev|[Bb]ack)
+					if [ "${cur_page_hist}" -le "1" ]; then
+						err "Theres no previous page"
+						sleep 0.5
+					else
+						: "$((page_comp -= hist_limt))"
+						: "$((cur_page_hist -= 1))"
+					fi
+					;;
+				*)
+					break
+					;;
+			esac
 		done
-		[ -z "${hist_picked}" ] && die
 		if printf '%s' "${hist_picked}" | grep -q '^0'; then save_terminal && exit 0; fi
 		# Assign the Infos by declaring
-		hist_data="$(printf '%s' "${hist_data}" | sed -n "${hist_picked}"p)"
+		hist_data="$(printf '%s' "${hist_data}" | sed -E "${hist_picked}"'!d')"
 		query_result="${hist_data%%¢*}#"
 		ani_searched="$(printf '%s' "${hist_data}" | sed -E 's_.*¢(.*)€.*_\1_g')"
 		ani_selected="1" qual_stream="high" query_count="1"
 		epi_selected="$(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g')"
-		player="${hist_data##*£}" 
+		player="${hist_data##*£}"
 	fi
 }
 
@@ -208,7 +247,7 @@ idx_comp(){
 	for qual_var in ${qualvidman} 1080 720 480 360 240; do
 		qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qual_var}" | cut -d':' -f 1)"
 		[ -n "${qualvid}" ] && break
-		inf "Quality not found, Switching to high quality as possible"
+		inf "Quality not found, Switching to highest quality as possible"
 		unset qualvid
 	done
 	[ -z "${qualvid}" ] && err "Can't get the Quality, switching to auto" && qualvid="auto"
@@ -218,7 +257,8 @@ idx_comp(){
 # UI Setup Design
 ui_banner(){
 	while IFS= read -r line; do
-		printf "\033[38;5;$(($$ % 60))m%*s\033[0m\n" "$(((${#line}+termcols)/2))" "${line}"
+		rnum="$(($$ % 60))"
+		printf "\033[38;5;${rnum}m%*s\033[0m\n" "$(((${#line}-${#rnum}+termcols)/2))" "${line}"
 	done <<-"EOF"
 	 _   _                         _                
 	| | | | __ _ _   _  __ _ _ __ (_)_ __ ___   ___ 
@@ -260,8 +300,9 @@ show_help(){
 	Easy and Lightweight Program that lets you watch anime without interruptions.
 	
 	 Usage:
-	    ${0##*/} <args>
-	    ${0##*/} -v | -h
+	    ${0##*/} -s "<server>" -q "<quality>" -p "<player>" [--dub] [anime]
+	    ${0##*/} -H -s "<server>" [--hist-limit="n"]
+	    ${0##*/} -v | -h | -D | -u
 		
 	 Options:
 	    -q [low|normal|high]\t: Choose specific quality
@@ -270,15 +311,20 @@ show_help(){
 	    --dub\t\t\t: Watch Dubbed Anime
 	    -d\t\t\t\t: Download Mode
 	    -H\t\t\t\t: Play Anime from History
-	    --hist-limit=[n]\t\t: Limit the number of choices to be showed up in stdout (default: 25)
+	    -D\t\t\t\t: Reset History File
+	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 25)
 	    -u\t\t\t\t: Update to the latest Version
 	    -v\t\t\t\t: Print Version and Exit
 	    -h\t\t\t\t: Print Help
 	
-	The quality selection on "-p built-in" is not available. (default: Auto)
+	The quality selection on "-p built-in" and in some servers are not available. (default: Auto)
 	Server Selection is optional, Server 1 is fast but most of the time 
 	it always break. Incase of the default ones is not working, please choose
 	the backup. Built-in video player is only for termux (Android) users.
+	
+	Vibration/Notification Signal, you can identify it when:
+	    | 1 Vibration/s | : Something succeeds without errors
+	    | 2 Vibration/s | : An error or something was failed
 	
 	Exit Codes:
 	    [0] : No Error
@@ -303,8 +349,9 @@ table_ui(){
 }
 
 table_ui_hist(){
-	data="$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
-	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
+	printf '\n%*s\n' "$((termcols - 5))" "Page ${cur_page_hist:=1} of ${pages_total:-1}"
+	data="$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')"
+	printf "\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
 	while IFS= read -r line; do
 		len="$((termcols - ${#line}))"
 		printf "\033[48;5;236m%s%${len}s\033[0m" "${line}"
@@ -328,26 +375,30 @@ choose_from_menu(){
 		index="0"
 		IFS='
 		'
+		unset func_off
+		if [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ]; then
+			[ "${server}" != "fembed" ] && [ "${cur}" = "6" ] && func_off="yes"
+		fi
 		for o in ${options}; do
-			if [ "${index}" = "${cur}" ]; then 
-					printf '%b\n' "  \033[0;32mᐅ\033[0m  \033[7m${o}\033[0m"
+			if [ "${index}" = "${cur}" ]; then
+					[ "${func_off}" = "yes" ] && printf '%b\n' "  \033[0;32mᐅ\033[0m  \033[48;5;1m${o}\033[0m" || printf '%b\n' "  \033[0;32mᐅ\033[0m  \033[7m${o}\033[0m"
 			else
 					printf '%s\n' "     ${o}"
 			fi
-			index="$(( index + 1 ))"
+			: "$(( index += 1 ))"
 		done
 		IFS="${defifs}"
 		key="$(dd bs=10 count=1 2>/dev/null)"
 		case "${key}" in
-			"${up}"|w|W)
-				cur="$(( cur - 1 ))"
+			"${up}"|[Ww])
+				: "$(( cur -= 1 ))"
 				[ "${cur}" -lt "0" ] && cur="0"
 				;;
-			"${down}"|s|S)
-				cur="$(( cur + 1 ))"
+			"${down}"|[Ss])
+				: "$(( cur += 1 ))"
 				[ "${cur}" -ge "${count}" ] && cur="$(( count - 1 ))"
 				;;
-			"${escchar}"|q|Q)
+			"${escchar}"|[Qq])
 				showCursor
 				exit 0
 				;;
@@ -399,12 +450,12 @@ search(){
 
 result_searched(){
 	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}&origin=1&root=animixplay.to" | tr -d "\\\\" | grep -oP 'name.*?a href="([^"]*)".*?title="([^"]*)".*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
-	[ -z "${query_result}" ] && die "Exception: No Results Found"
+	[ -z "${query_result}" ] && die "1" "No Results Found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
 	table_ui "${query_scraped}"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
-	[ "${query_count}" = "0" ] && die "Exception: Not Found"
+	[ "${query_count}" = "0" ] && die "1" "No Results was Found"
 }
 
 selector(){
@@ -427,7 +478,7 @@ epi_counter(){
 	epilist_index=$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')
 	epi_total=$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,]*),.*_\1_p')
 	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre: \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
-	[ -z "${epi_total}" ] && die "Exception: Anime is Not released yet, Or your IP is Blocked"
+	[ -z "${epi_total}" ] && die "1" "Anime is Not released yet, Or your IP is Blocked"
 }
 
 episode_selector(){
@@ -440,7 +491,7 @@ episode_selector(){
 	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 	epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	while [ "${epi_whole:-$((epi_total + 2))}" -gt "${epi_total}" ]; do
-		err "Exception: Episode does not Exist"
+		err "Episode does not Exist"
 		input_questions "Episode [1-${epi_total}]: "
 		read -r epi_selected
 		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
@@ -469,14 +520,18 @@ id_grepper(){
 	else
 		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
-	[ -z "${idserv}" ] && die "Exception: Not Found"
+	[ -z "${idserv}" ] && die "1" "No ID Returned, Episode does not Exist."
 	case "${idserv}" in
-		*id=*)	idserv="${idserv##*id=}"	;;
+		*id=*)	idserv="${idserv##*id=}" idena="yes"	;;
 		*player.html#*)	idserv="${idserv##*\#}" server="defdir"	;;
 		*ed/video/*)	idserv="${idserv##*/}" server="daily"	;;
 		*com/video/*)	idserv="${idserv##*/}" server="vim"	;;
 		*/videoembed/*)	idserv="${idserv##*/}" server="ok" player="mpv"	;;
-		*)	die "Unknown Anime ID returned, please report this bug in Github."	;;
+		*)	die "1" "Unknown Anime ID returned, please report this bug in Github."	;;
+	esac
+	case "${server:-default}" in
+		gogo|sb|fembed|dood|mpup)
+			[ "${idena}" = "yes" ] || die "1" "No ID Returned, Default server is only available at this time"	;;
 	esac
 }
 
@@ -484,7 +539,7 @@ streaming_url_server(){
 	if [ "${download_mode}" != "true" ]; then
 		case "${server:=default}" in
 			sb|dood|mpup)
-					[ "${player}" = "built-in" ] && die "Built-in player is not supported in this Server"
+					[ "${player}" = "built-in" ] && die "1" "Built-in player is not supported in this Server"
 				;;
 			ok)
 					[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
@@ -554,24 +609,25 @@ streaming_url_server(){
 			;;
 		# Main Server
 		default|*)
+			[ "${idena}" = "yes" ] || die "1" "No ID Returned, Default server is only available at this time"
 			encodeb64="$(printf '%s' "${1}" | base64)"
 			col_craft_st1="$(printf '%s%s%s' "${1}" "LTXs3GrU8we9O" "${encodeb64}" | base64)"
 			main_streaming="$(curl -sk -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			;;
 	esac
-	[ -z "${main_streaming}" ] && die "Exception: Failed to retrieve streams"
+	[ -z "${main_streaming}" ] && die "1" "Failed to retrieve streams from server"
 }
 
 quality_selector(){
 	case ${qual_stream:-high} in
-		normal|Normal|n|N|720)
+		[Nn]ormal|[Nn]|720)
 			qualvidman="720"
 			;;
-		worst|low|Low|l|L|360)
+		worst|[Ll]ow|[Ll]|360)
 			[ "${server}" = "fembed" ] && qualvidman="480" || qualvidman="360"
 			;;
-		high|High|H|h|best|1080|*)
+		best|[Hh]igh|[Hh]|1080|*)
 			qualvidman="1080"
 			;;
 	esac
@@ -617,26 +673,26 @@ loop(){
 		Search For Another Anime
 		Change Quality
 		Download Episode"
-		[ -z "${menu_result_menu}" ] && die "Unknown Error Appeared"
+		[ -z "${menu_result_menu}" ] && die "1" "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
-				die
+				die "0"
 				;;
 			1)
 				continue
 				;;
 			2)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
-					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
+					epi_selected="${epi_selected%%.[0-9]*}"
 				fi
-				epi_selected=$((epi_selected + 1))
+				: "$((epi_selected += 1))"
 				unset main_streaming encodeb64 idserv
 				;;
 			3)
 				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
-					epi_selected="$(printf '%s' "${epi_selected}" | sed -E 's_\.[0-9]*__g')"
+					epi_selected="${epi_selected%%.[0-9]*}"
 				fi
-				epi_selected=$((epi_selected - 1))
+				: "$((epi_selected -= 1))"
 				unset main_streaming encodeb64 idserv
 				;;
 			4)
@@ -651,6 +707,9 @@ loop(){
 				;;
 			6)
 				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
+				if [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ]; then
+					[ "${server}" = "fembed" ] || die "1" "Switching quality in (VLC & builtin) players is not available"
+				fi
 				choose_from_menu "\nPick and change your quality:" "High (1080p/Auto)
 				Normal (720p)
 				Low (480p)"
@@ -678,7 +737,7 @@ loop(){
 				esac
 				download_mode="true"
 				if [ "${curserv}" = "true" ]; then
-					die
+					die "0"
 				else
 					unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 					range_dl_handler
@@ -697,7 +756,7 @@ range_dl_handler(){
 	slice="$(printf '%s' "${epi_selected}" | tr '-' '\n')"
 	start_ep="$(printf '%s' "${slice}" | head -n 1)"
 	end_ep="$(printf '%s' "${slice}" | tail -n 1)"
-	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die "Exception: Out of Range"
+	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die "1" "Out of Range"
 	while [ "${start_ep}" -le "${end_ep:-${start_ep}}" ]; do
 		epi_selected="${start_ep}"
 		episode_selector
@@ -706,10 +765,9 @@ range_dl_handler(){
 		quality_selector
 		streaming_url_server "${idserv}"
 		dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"
-		start_ep="$((start_ep + 1))"
+		: "$((start_ep += 1))"
 	done
-	save_terminal
-	exit 0
+	die "0"
 }
 
 
@@ -736,7 +794,7 @@ main_exec(){
 
 # Arguments Parser
 arg_parser(){
-	while getopts ":vhduHq:-:p:s:" opt; do
+	while getopts ":vhduHDq:-:p:s:" opt; do
 		case "${opt}" in
 			v)
 				printf '%s\n' "Version: ${VERSION}"
@@ -755,13 +813,18 @@ arg_parser(){
 			H)
 				hist_handler
 				;;
+			D)
+				[ -e ~/.hayanihist ] || die "1" "Can't clear the file, File does not exist."
+				: > ~/.hayanihist
+				exit 0
+				;;
 			-)
 				case "${OPTARG}" in
 					dub)	dub_mode="true"	;;
 					help)	show_help && exit 0	;;
 					*hist-limit*)	hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"	;;
 					*)
-						err "Exception: Illegal Option"
+						err "[--${OPTARG}]: Illegal Option"
 						show_help
 						exit 1
 						;;
@@ -799,7 +862,8 @@ arg_parser(){
 				;;
 		esac
 	done
-	shift "$((OPTIND -1))"
+	shift "$((OPTIND - 1))"
+	[ -z "${ani_searched}" ] && ani_searched="${*}"
 }
 
 
