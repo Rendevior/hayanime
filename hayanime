@@ -23,9 +23,9 @@ base_url_ani="https://6ani.me"
 base_url_go="https://goload.pro"
 search_base_api="https://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
 user_agent='Mozilla/5.0 (Linux; Android 8.1.0; vivo 1801) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/10.2 Chrome/71.0.3578.99 Mobile Safari/537.36'
-termcols="$(stty size)" termcols="${termcols##* }"
-currtrunc="$(printf '%s' "${PWD:=$(pwd)}" | sed -E 's_(.{10}).*(.{20})_\1...\2_g')"
-userguest="$(whoami)"
+termcols="${COLUMNS:-$(stty size)}" termcols="${termcols##* }"
+currtrunc="$(printf '%s' "${PWD:-$(pwd)}" | sed -E 's_(.{10}).*(.{20})_\1...\2_g')"
+userguest="$(id -un)"
 saveterm="$(stty -g)"
 defifs="${IFS}"
 player="mpv"
@@ -55,11 +55,9 @@ sanitize_terminal(){
 
 hideCursor(){
 	printf "\033[?25l"
-	trap "showCursor && exit 2" 2
 }
 
 showCursor(){
-	printf "\033[?25h"
 	save_terminal
 }
 
@@ -180,7 +178,7 @@ hist_handler(){
 			while true; do
 				: "$((hist_count -= hist_limt))"
 				: "$((pages_total += 1))"
-				[ -z "${hist_count%%-*}" ] && break
+				[ -z "${hist_count%%-*}" ] && break ; [ "${hist_count}" = "0" ] && break
 			done
 			[ "${hist_count_persi}" = "0" ] && die "1" "History File is Empty, Watch anime first"
 			table_ui_hist "${hist_data}"
@@ -450,7 +448,7 @@ search(){
 
 result_searched(){
 	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}&origin=1&root=animixplay.to" | tr -d "\\\\" | grep -oP 'name.*?a href="([^"]*)".*?title="([^"]*)".*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
-	[ -z "${query_result}" ] && die "1" "No Results Found"
+	[ -z "${query_result}" ] && die "1" "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
 	table_ui "${query_scraped}"
@@ -477,7 +475,7 @@ selector(){
 epi_counter(){
 	epilist_index=$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')
 	epi_total=$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,]*),.*_\1_p')
-	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre: \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
+	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 	[ -z "${epi_total}" ] && die "1" "Anime is Not released yet, Or your IP is Blocked"
 }
 
@@ -575,10 +573,9 @@ streaming_url_server(){
 		dood)
 			dood_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
 			cust_referer="https://dood.pm/e/${dood_id}"
-			dood_path="$(curl -A "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
-			sleep 1.5
+			dood_path="$(curl -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(date +%s)"
-			main_streaming="$(curl -A "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
+			main_streaming="$(curl -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
 			if printf '%s' "${main_streaming}" | grep -qE '[c|C]loudflare'; then
 				unset main_streaming
 			fi
