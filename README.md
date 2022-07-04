@@ -83,13 +83,13 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 ```
 
 ## Prerequisites 
-+ GREP
-+ CURL
++ Grep
++ Curl
 + MPV **(For Linux/Android Users)**
 + VLC **(For Windows Users)**
 + Aria2c & FFmpeg (For Downloading)
-+ SED
-+ AWK
++ Sed
++ Awk
 ## Option / Args
 ```
  Options:
@@ -108,7 +108,7 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 <details>
 <summary>Additional Infos...</summary><br>
 
-+ The quality selection on `-p built-in` is not available. (default: Auto)
++ The quality selection on `-p built-in` and in some servers are not available. (default: Auto)
 + Server Selection is optional, Server 1 is fast but most of the time                     it always break
 + Incase of the default ones is not working, please choose the backup.
 + Built-in video player is only for termux (Android) users.
@@ -134,11 +134,11 @@ Vibration/Notification Signal, you can identify it when:
 `prev` — to go to the previous page
 
 + Keybindings on Picker<br>
-   - `Q` or `ESC`		: Exit
-   - `W` or `Button UP`		: to go up
-   - `S` or `Button Down`	: to go down
-   - `PGUP`			: to go to the First Choice
-   - `PGDN`			: to go to the Last Choice
+   - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
+   - <kbd>W</kbd> or <kbd>Button UP</kbd>		— to go up
+   - <kbd>S</kbd> or <kbd>Button Down</kbd>	— to go down
+   - <kbd>PGUP</kbd>			— to go to the First Choice
+   - <kbd>PGDN</kbd>			— to go to the Last Choice
 
 *Other Features will be available near future.*
 
