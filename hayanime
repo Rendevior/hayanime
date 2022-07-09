@@ -264,6 +264,9 @@ debug_handler(){
 		total-eps)
 			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Total Episodes: ${2}"
 			;;
+		speci-eps)
+			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Special Episodes: ${2}"
+			;;
 		# Misc
 		took-dur)
 			took_dur="$(($(awk 'BEGIN {srand(); print srand()}') - took_dur))"
@@ -512,11 +515,15 @@ selector(){
 
 epi_counter(){
 	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')"
-	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,]*),.*_\1_p')"
-	[ "${debug_mode}" = "true" ] && debug_handler total-eps "${epi_total}"
+	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
 	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 	if [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; then
 		die "1" "Anime is Not released yet, Or your IP is Blocked"
+	fi
+	if [ "${debug_mode}" = "true" ]; then
+		debug_handler total-eps "${epi_total}"
+		special_ep="$(printf '%s' "${epilist_index}" | grep -o 'extra.*\},' | grep -oE '"[0-9]*\.[0-9]' | sed -e ':a;N;$!ba;s_\n"_, _g' -e 's_^"__g')"
+		[ -n "${special_ep}" ] && debug_handler speci-eps "${special_ep}"
 	fi
 }
 
