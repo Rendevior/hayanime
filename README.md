@@ -83,13 +83,17 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 ```
 
 ## Prerequisites 
-+ Grep
-+ Curl
-+ MPV **(For Linux/Android Users)**
-+ VLC **(For Windows Users)**
-+ Aria2c & FFmpeg (For Downloading)
-+ Sed
-+ Awk
++ Essentials
+  + Grep
+  + Curl
+  + Aria2c & FFmpeg (For Downloading)
+  + Sed
+  + Awk
++ Players
+  + MPV **(For Linux/Android Users)**
+  + VLC **(For Windows Users)**
+  + IINA **(For MacOS Users)**
+
 ## Option / Args
 ```
  Options:
@@ -104,6 +108,9 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
+ Debugging tools:
+    -t                          : Dry Run (for testing servers availability)
+    --debug                     : Show Debug (for testing purposes)
 ```
 <details>
 <summary>Additional Infos...</summary><br>
