@@ -27,20 +27,24 @@ Now Download and Install
 curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
 chmod +x "${PREFIX}/bin/hayanime"
 ```
+___
 Setup MPV (For Android Users | Optional)
 ```
 curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
 chmod +x "$PREFIX/bin/mpv"
-
-> Open MPV app
-> Click 3 Dots at the top
-> Settings
-> Advanced
-> Edit mpv.conf
-> And insert this:
-include="/storage/emulated/0/mpv/mpv.tmp"
-> Click "Save"
 ```
+
+- Open MPV app<br>
+- Click <kbd>⋮</kbd> at the top<br>
+- Settings<br>
+- Advanced<br>
+- Edit mpv.conf<br>
+- And insert this:
+```
+include="/storage/emulated/0/mpv/mpv.tmp"
+```
+- Click <kbd>Save</kbd>
+
 ### Windows (Gitbash)
 
 • Install Gitbash [here](https://git-scm.com/download/win)<br>
@@ -83,13 +87,17 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 ```
 
 ## Prerequisites 
-+ Grep
-+ Curl
-+ MPV **(For Linux/Android Users)**
-+ VLC **(For Windows Users)**
-+ Aria2c & FFmpeg (For Downloading)
-+ Sed
-+ Awk
++ Essentials
+  + Grep
+  + Curl
+  + Aria2c & FFmpeg (For Downloading)
+  + Sed
+  + Awk
++ Players
+  + MPV **(For Linux/Android Users)**
+  + VLC **(For Windows Users)**
+  + IINA **(For MacOS Users)**
+
 ## Option / Args
 ```
  Options:
@@ -104,6 +112,9 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
+ Debugging tools:
+    -t                          : Dry Run (for testing servers availability)
+    --debug                     : Show Debug (for testing purposes)
 ```
 <details>
 <summary>Additional Infos...</summary><br>
