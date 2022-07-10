@@ -16,7 +16,7 @@
 
 VERSION="v2.3.0"
 
-# Variables
+# Variables (Default Options)
 OWNPID="${$}"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
@@ -28,11 +28,18 @@ currtrunc="$(printf '%s' "${PWD:-$(pwd)}" | sed -E 's_(.{10}).*(.{20})_\1...\2_g
 userguest="$(id -un)"
 saveterm="$(stty -g)"
 defifs="${IFS}"
-player="mpv"
 server="default"
 download_mode="false"
 debug_mode="false"
 dry_run="false"
+
+# Default player depends on platform
+case "$(uname -a)" in
+	*Android*)	player="built-in"	;;
+	*Darwin*)	player="iina"	;;
+	*MINGW*|*MSYS*|*WSL*|*[Mm]icrosoft*)	player="vlc"	;;
+	*)	player="mpv"	;;
+esac
 
 # PATH env for VLC
 export PATH="${PATH}:/mnt/c/Program Files/VideoLAN/VLC:/mnt/c/Program Files (x86)/VideoLAN/VLC:/c/Program Files/VideoLAN/VLC:/c/Program Files (x86)/VideoLAN/VLC"
@@ -516,13 +523,13 @@ selector(){
 epi_counter(){
 	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')"
 	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-	aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 	if [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; then
 		die "1" "Anime is Not released yet, Or your IP is Blocked"
 	fi
 	if [ "${debug_mode}" = "true" ]; then
+		aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 		debug_handler total-eps "${epi_total}"
-		special_ep="$(printf '%s' "${epilist_index}" | grep -o 'extra.*\},' | grep -oE '"[0-9]*\.[0-9]' | sed -e ':a;N;$!ba;s_\n"_, _g' -e 's_^"__g')"
+		special_ep="$(printf '%s' "${epilist_index}" | grep -o 'extra.*\},' | grep -oE '"[0-9]*\.[0-9]' | cut -f2 -d'"' | xargs | sed 's_ _, _g')"
 		[ -n "${special_ep}" ] && debug_handler speci-eps "${special_ep}"
 	fi
 }
@@ -814,9 +821,8 @@ range_dl_handler(){
 	selector
 	episode_selector
 	qualitypicker
-	slice="$(printf '%s' "${epi_selected}" | tr '-' '\n')"
-	start_ep="$(printf '%s' "${slice}" | head -n 1)"
-	end_ep="$(printf '%s' "${slice}" | tail -n 1)"
+	start_ep="${epi_selected%%-*}"
+	end_ep="${epi_selected##*-}"
 	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die "1" "Out of Range"
 	while [ "${start_ep}" -le "${end_ep:-${start_ep}}" ]; do
 		epi_selected="${start_ep}"
@@ -833,6 +839,7 @@ range_dl_handler(){
 
 dryrun_handler(){
 	main_interface
+	qual_stream="high"
 	main
 	main_interface
 	[ "${debug_mode}" = "true" ] && debug_handler ani-url "${anime_selected}"
