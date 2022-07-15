@@ -219,11 +219,13 @@ ffmpegdler(){
    else
    	cat ~/"${ffmp_temp}"/* >> "tmpvid.ts"
 	fi
-	rm -rdf ~/"${ffmp_temp}" ~/"${ffmp_j}"
 	# Check if audio was seperated to ts streams to merge it
-	[ -n "${aud_perf}" ] && ffmpeg_prog -i "${aud_perf}" -i "tmpvid.ts" -c copy "${4}" || \
+	if [ -n "${aud_perf}" ]; then
+		ffmpeg_prog -i "${aud_perf}" -i "tmpvid.ts" -c copy "${4}"
+	else
 		ffmpeg_prog -i "tmpvid.ts" -c copy "${4}"
-	[ -e "tmpvid.ts" ] && rm tmpvid.ts
+	fi
+	cleanup_trap
 	# Unset all variables for reusing function
 	unset ts_data_fir selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces i
 	return 0
