@@ -1005,11 +1005,11 @@ main(){
 }
 
 main_exec(){
-	if [ "${download_mode}" = "true" ]; then
+	if [ "${dry_run}" = "true" ]; then
+		dryrun_handler
+	elif [ "${download_mode}" = "true" ]; then
 		main_interface
 		range_dl_handler
-	elif [ "${dry_run}" = "true" ]; then
-		dryrun_handler
 	else
 		[ "${player}" = "mpv" ] && dep_check "mpv"
 		loop
