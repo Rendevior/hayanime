@@ -157,7 +157,7 @@ dl_manager(){
 			xco="${?}"
 			;;
 		*.m3u8*)
-			dep_check "ffmpeg"
+			dep_check "ffmpeg" "openssl"
 			ffmpegdler "${2}" "${1}" "${qualvidman}" "${3}" 
 			xco="${?}"
 			;;
@@ -1099,5 +1099,5 @@ arg_parser(){
 
 # Call Functions
 arg_parser "${@}"
-dep_check "curl" "sed" "grep" "awk" "base64" "od" "wc" "diff" "patch" "openssl"
+dep_check "curl" "sed" "grep" "awk" "base64" "od" "wc" "diff" "patch"
 main_exec
