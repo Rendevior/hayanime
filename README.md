@@ -73,8 +73,8 @@ chmod +x "${PREFIX}/bin/hayanime"
 Its Simple..
 ```
 Usage:
-    hayanime -s "<server>" -q "<quality>" -p "<player>" [--dub] [anime]
-    hayanime -H -s "<server>" [--hist-limit="n"]
+    hayanime [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
+    hayanime [-H] [-s <server>] [--hist-limit="n"]
     hayanime -v | -h | -D | -u
     
 Sample Input:
