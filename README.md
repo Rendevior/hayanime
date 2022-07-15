@@ -19,7 +19,7 @@ https://user-images.githubusercontent.com/93582751/174440162-86fe9078-678c-46f4-
 Install Dependencies needed
 ```
 pkg up
-apt install aria2 ffmpeg -y
+pkg in aria2 ffmpeg openssl-tool -y
 ```
 
 Now Download and Install
@@ -47,6 +47,8 @@ include="/storage/emulated/0/mpv/mpv.tmp"
 
 ### Windows (Gitbash)
 
+> **Note**: Install Dependencies using scoop
+
 • Install Gitbash [here](https://git-scm.com/download/win)<br>
 • Run "Gitbash" as Administrator
 
@@ -60,7 +62,7 @@ chmod +x "/bin/hayanime"
 
 Install Dependencies needed
 ```
-sudo <your-package-manager> aria2 ffmpeg mpv
+sudo <your-package-manager> aria2 ffmpeg mpv openssl
 ```
 
 Download and Install
@@ -73,8 +75,8 @@ chmod +x "${PREFIX}/bin/hayanime"
 Its Simple..
 ```
 Usage:
-    hayanime -s "<server>" -q "<quality>" -p "<player>" [--dub] [anime]
-    hayanime -H -s "<server>" [--hist-limit="n"]
+    hayanime [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
+    hayanime [-H] [-s <server>] [--hist-limit="n"]
     hayanime -v | -h | -D | -u
     
 Sample Input:
@@ -90,7 +92,7 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 + Essentials
   + Grep
   + Curl
-  + Aria2c & FFmpeg (For Downloading)
+  + Aria2c & FFmpeg (For Downloading) / openssl (Decoding)
   + Sed
   + Awk
 + Players
