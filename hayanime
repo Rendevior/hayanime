@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.1"
+VERSION="v2.4.0"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -264,26 +264,22 @@ hist_handler(){
 			input_questions "Pick a Number: "
 			read -r hist_picked
 			while true; do
-				case "${hist_picked}" in
-					[0-9]*|[0-9]*[np])
-						hist_picked_d="${hist_picked%%[np]*}"
-						if [ "${hist_picked_d:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
-							err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
-							input_questions 'Pick a Number: '
-							read -r hist_picked
-						else
-							break
-						fi
-						;;
-					[Nn]ext|[Pp]rev|[Bb]ack)
-						break
-						;;
-					*)
-						err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
+				if printf '%s' "${hist_picked}" | grep -qE '(^[1-9][0-9]*$|^[1-9][0-9]*[NPnp]$)'; then
+					hist_picked_d="${hist_picked%%[NPnp]*}"
+					if [ "${hist_picked_d:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
+						err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
 						input_questions 'Pick a Number: '
 						read -r hist_picked
-						;;
-				esac
+					else
+						break
+					fi
+				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack'; then
+					break
+				else
+					err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
+					input_questions 'Pick a Number: '
+					read -r hist_picked
+				fi
 			done
 			case "${hist_picked}" in
 				[Nn]ext)
@@ -306,18 +302,13 @@ hist_handler(){
 					save_terminal
 					exit 0
 					;;
-				[0-9]*n)
-					solv="1" hist_picked="${hist_picked_d}"
-					break
-					;;
-				[0-9]*p)
-					solv="-1" hist_picked="${hist_picked_d}"
-					break
-					;;
-				*)
-					break
-					;;
 			esac
+			if printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Nn]$'; then
+				solv="1" hist_picked="${hist_picked_d}"
+			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Pp]$'; then
+				solv="-1" hist_picked="${hist_picked_d}"
+			fi
+			break
 		done
 		# Assign the Infos by declaring
 		hist_data="$(printf '%s' "${hist_data}" | sed -E "${hist_picked}"'!d')"
