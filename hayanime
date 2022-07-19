@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.0"
+VERSION="v2.4.1"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -34,6 +34,7 @@ debug_mode="false"
 dry_run="false"
 ffmp_temp=".piece"
 ffmp_j=".tmpjob"
+ffmp_purl=".piecesUrl"
 
 # Default player depends on platform
 case "$(uname -a)" in
@@ -74,7 +75,7 @@ showCursor(){
 }
 
 cleanup_trap(){
-	for temps in tmpvid.ts ~/.piece ~/.tmpjob ~/.vstats; do
+	for temps in tmpvid.ts ~/.piece ~/.tmpjob ~/.vstats ~/.piecesUrl; do
 		[ -e "${temps}" ] && rm -rdf "${temps}"
 	done
 }
@@ -157,7 +158,7 @@ dl_manager(){
 			xco="${?}"
 			;;
 		*.m3u8*)
-			dep_check "ffmpeg" "openssl"
+			dep_check "ffmpeg" "openssl" "aria2c"
 			ffmpegdler "${2}" "${1}" "${qualvid}" "${3}" 
 			xco="${?}"
 			;;
@@ -185,7 +186,7 @@ ffmpegdler(){
 	[ -z "${selc_qual}" ] && inf "Quality Not Found, Switching to High" && selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x$(printf '%s' "${quallist_vid_ind}" | head -n 1)/{n;p;q}")"
 	[ -d ~/"${ffmp_temp}" ] || mkdir -p ~/"${ffmp_temp}"
 	# Get Relative Path, when it is not fully sourced into stream url
-	if ! printf '%s' "${ts_data_fir}" | grep -q 'http'; then
+	if ! printf '%s' "${selc_qual}" | grep -q 'http'; then
 		relpath="${1%/*}/"
 	fi
 	aud_perf="$(printf '%s' "${ts_data_fir}" | sed -nE 's_^#EXT-X-MEDIA:TYPE=AUDIO.*audio-0.*URI="([^\"]*)".*_\1_p')"
@@ -207,20 +208,17 @@ ffmpegdler(){
 	total_pieces="$(printf '%s\n' "${pieces_data}" | wc -l)"
 	unset i
 	while [ "$((i += 1))" -le "${total_pieces}" ]; do
-		curl -sLk "${relpath}$(printf "%s" "${pieces_data}" | sed -n "${i}p")" > ~/"${ffmp_temp}/$(printf "%04d" "${i}").ts" && progbar "${i}" "${total_pieces}" "Processing Pieces..." &
-		jobs -p > ~/"${ffmp_j}"
-		while [ "$(wc -w < ~/"${ffmp_j}")" -ge 48 ]; do
-			jobs > ~/"${ffmp_j}"
-			sleep 0.03
-		done
+		printf '%s\n  %s\n' "${relpath}$(printf "%s" "${pieces_data}" | sed -n "${i}p")" "out=$(printf "%04d" "${i}").ts" >> ~/"${ffmp_purl}"
 	done
-	wait
+	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide"
 	if [ -n "${enc_key}" ]; then
-		for i in ~/"${ffmp_temp}"/*;do
+		for i in ~/"${ffmp_temp}"/*; do
+			: "$((in+=1))"
+			progbar "${in}" "${total_pieces}" "Decrypting..."
 			openssl aes-128-cbc -d -K "${dec_key}" -iv "${dec_iv}" -nopad < "${i}" >> "tmpvid.ts"
-   	done
-   else
-   	cat ~/"${ffmp_temp}"/* >> "tmpvid.ts"
+		done
+	else
+		cat ~/"${ffmp_temp}"/* >> "tmpvid.ts"
 	fi
 	# Check if audio was seperated to ts streams to merge it
 	if [ -n "${aud_perf}" ]; then
@@ -230,7 +228,7 @@ ffmpegdler(){
 	fi
 	cleanup_trap
 	# Unset all variables for reusing function
-	unset ts_data_fir quallist_vid_ind selc_pix selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces i
+	unset ts_data_fir quallist_vid_ind selc_pix selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces i in
 	return 0
 }
 
@@ -412,18 +410,18 @@ show_help(){
 	
 	 Usage:
 	    ${0##*/} [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
-	    ${0##*/} [-H] [-s <server>] [--hist-limit="n"]
+	    ${0##*/} [--hist-limit="n"] [-H] [-s <server>]
 	    ${0##*/} -v | -h | -D | -u
 		
 	 Options:
 	    -q [low|normal|high]\t: Choose specific quality
 	    -s [default|(1-5)]\t\t: Select server
-	    -p [vlc|built-in]\t\t: Use specific video player (default: mpv)
+	    -p [vlc|built-in]\t\t: Use specific video player (default based on OS)
 	    --dub\t\t\t: Watch Dubbed Anime
 	    -d\t\t\t\t: Download Mode
 	    -H\t\t\t\t: Play Anime from History
 	    -D\t\t\t\t: Reset History File
-	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 25)
+	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 15)
 	    -u\t\t\t\t: Update to the latest Version
 	    -v\t\t\t\t: Print Version and Exit
 	    -h\t\t\t\t: Print Help
@@ -632,6 +630,7 @@ selector(){
 		err "Out of Bounds... Pick between 1-${query_count}, or type 0 to exit."
 		input_questions 'Pick Here By Number: '
 		read -r ani_selected
+		ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	done
 	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
 	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s_(.*)#.*_${base_url}\1_")"
@@ -678,6 +677,7 @@ qualitypicker(){
 		if printf '%s' "${server}" | grep -qE 'dood|mpup' || [ "${player}" = "built-in" ]; then
 			qual_stream="high"
 		fi
+		[ "${download_mode}" = "true" ] && unset qual_stream
 		[ -z "${qual_stream}" ] && input_questions 'Quality: ' && read -r qual_stream
 	fi
 }
@@ -796,11 +796,11 @@ streaming_url_server(){
 quality_selector(){
 	case ${qual_stream:-high} in
 		[Nn]ormal|[Nn]|720)	qualvidman="720" qualvid="2"	;;
-		worst|[Ll]ow|[Ll]|360)
+		[Ww]orst|[Ll]ow|[Ll]|360)
 			[ "${server}" = "fembed" ] && qualvidman="480" || qualvidman="360"
 			qualvid="last"
 			;;
-		best|[Hh]igh|[Hh]|1080|*)	qualvidman="1080" qualvid="1"	;;
+		[Bb]est|[Hh]igh|[Hh]|1080|*)	qualvidman="1080" qualvid="1"	;;
 	esac
 }
 
