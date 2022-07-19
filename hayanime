@@ -33,7 +33,6 @@ download_mode="false"
 debug_mode="false"
 dry_run="false"
 ffmp_temp=".piece"
-ffmp_j=".tmpjob"
 ffmp_purl=".piecesUrl"
 
 # Default player depends on platform
@@ -75,7 +74,7 @@ showCursor(){
 }
 
 cleanup_trap(){
-	for temps in tmpvid.ts ~/.piece ~/.tmpjob ~/.vstats ~/.piecesUrl; do
+	for temps in tmpvid.ts ~/.piece ~/.vstats ~/.piecesUrl; do
 		[ -e "${temps}" ] && rm -rdf "${temps}"
 	done
 }
