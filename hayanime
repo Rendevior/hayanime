@@ -277,6 +277,11 @@ hist_handler(){
 					read -r hist_picked
 				fi
 			done
+			if printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Nn]$'; then
+				solv="1" hist_picked="${hist_picked_d}"
+			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Pp]$'; then
+				solv="-1" hist_picked="${hist_picked_d}"
+			fi
 			case "${hist_picked}" in
 				[Nn]ext)
 					if [ "${cur_page_hist}" -ge "${pages_total}" ]; then 
@@ -298,13 +303,10 @@ hist_handler(){
 					save_terminal
 					exit 0
 					;;
+				*)
+					break
+					;;
 			esac
-			if printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Nn]$'; then
-				solv="1" hist_picked="${hist_picked_d}"
-			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Pp]$'; then
-				solv="-1" hist_picked="${hist_picked_d}"
-			fi
-			break
 		done
 		# Assign the Infos by declaring
 		hist_data="$(printf '%s' "${hist_data}" | sed -E "${hist_picked}"'!d')"
