@@ -1,5 +1,6 @@
+
+<h1 align="center">Haya<sup><sub><sup>早</sup></sub></sup>nime</h1>
 <div align="center">
-<h1>Haya<sup><sub><sup>早</sup></sub></sup>nime</h1>
 
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
@@ -28,10 +29,12 @@ curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockM
 chmod +x "${PREFIX}/bin/hayanime"
 ```
 ___
-Setup MPV (For Android Users | Optional)
+> **Note**: Setupping MPV for Android is Optional
+
+Setup MPV (For Android Users)
 ```
-curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
-chmod +x "$PREFIX/bin/mpv"
+curl -sL -o "${PREFIX}/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
+chmod +x "${PREFIX}/bin/mpv"
 ```
 
 - Open MPV app<br>
@@ -58,7 +61,7 @@ curl -sL -o "/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayan
 chmod +x "/bin/hayanime"
 ```
 
-### Linux
+### Linux | WSL 
 
 Install Dependencies needed
 ```
