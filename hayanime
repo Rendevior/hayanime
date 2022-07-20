@@ -205,10 +205,9 @@ ffmpegdler(){
 		relpath="${1%/*}/"
 	fi
 	total_pieces="$(printf '%s\n' "${pieces_data}" | wc -l)"
-	unset i
-	while [ "$((i += 1))" -le "${total_pieces}" ]; do
-		printf '%s\n  %s\n' "${relpath}$(printf "%s" "${pieces_data}" | sed -n "${i}p")" "out=$(printf "%04d" "${i}").ts" >> ~/"${ffmp_purl}"
-	done
+	awk -v "r=${relpath}" '{printf("%s%s\n  %s%04d%s\n", r, $1, "out=", NR, ".ts")}' > ~/"${ffmp_purl}" <<-END
+	${pieces_data}
+	END
 	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide"
 	if [ -n "${enc_key}" ]; then
 		for i in ~/"${ffmp_temp}"/*; do
@@ -227,7 +226,7 @@ ffmpegdler(){
 	fi
 	cleanup_trap
 	# Unset all variables for reusing function
-	unset ts_data_fir quallist_vid_ind selc_pix selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces i in
+	unset ts_data_fir quallist_vid_ind selc_pix selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces in
 	return 0
 }
 
