@@ -79,7 +79,7 @@ Its Simple..
 ```
 Usage:
     hayanime [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
-    hayanime [-H] [-s <server>] [--hist-limit="n"]
+    hayanime [--hist-limit="n"] [-H] [-s <server>]
     hayanime -v | -h | -D | -u
     
 Sample Input:
@@ -153,8 +153,8 @@ Vibration/Notification Signal, you can identify it when:
 
 + Keybindings on Picker<br>
    - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
-   - <kbd>W</kbd> or <kbd>Button UP</kbd>		— to go up
-   - <kbd>S</kbd> or <kbd>Button Down</kbd>	— to go down
+   - <kbd>W</kbd> or <kbd>↑</kbd>		— to go up
+   - <kbd>S</kbd> or <kbd>↓</kbd>	— to go down
    - <kbd>PGUP</kbd>			— to go to the First Choice
    - <kbd>PGDN</kbd>			— to go to the Last Choice
 
