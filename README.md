@@ -1,5 +1,6 @@
+
+<h1 align="center">Haya<sup><sub><sup>早</sup></sub></sup>nime</h1>
 <div align="center">
-<h1>Haya<sup><sub><sup>早</sup></sub></sup>nime</h1>
 
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
@@ -28,10 +29,12 @@ curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockM
 chmod +x "${PREFIX}/bin/hayanime"
 ```
 ___
-Setup MPV (For Android Users | Optional)
+> **Note**: Setupping MPV for Android is Optional
+
+Setup MPV (For Android Users)
 ```
-curl -sL -o "$PREFIX/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
-chmod +x "$PREFIX/bin/mpv"
+curl -sL -o "${PREFIX}/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
+chmod +x "${PREFIX}/bin/mpv"
 ```
 
 - Open MPV app<br>
@@ -58,7 +61,7 @@ curl -sL -o "/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayan
 chmod +x "/bin/hayanime"
 ```
 
-### Linux
+### Linux | WSL 
 
 Install Dependencies needed
 ```
@@ -76,7 +79,7 @@ Its Simple..
 ```
 Usage:
     hayanime [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
-    hayanime [-H] [-s <server>] [--hist-limit="n"]
+    hayanime [--hist-limit="n"] [-H] [-s <server>]
     hayanime -v | -h | -D | -u
     
 Sample Input:
@@ -92,25 +95,25 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 + Essentials
   + Grep
   + Curl
-  + Aria2c & FFmpeg (For Downloading) / openssl (Decoding)
+  + Aria2c & FFmpeg (Downloading) / openssl (Decoding)
   + Sed
   + Awk
 + Players
-  + MPV **(For Linux/Android Users)**
-  + VLC **(For Windows Users)**
-  + IINA **(For MacOS Users)**
+  + MPV **(Linux/Android Users)**
+  + VLC **(Windows Users)**
+  + IINA **(MacOS Users)**
 
 ## Option / Args
 ```
  Options:
     -q [low|normal|high]        : Choose specific quality                               
     -s [default|(1-5)]          : Select server                                         
-    -p [vlc|built-in]           : Use specific video player (default: mpv)              
+    -p [vlc|built-in]           : Use specific video player (default based on os)              
     --dub                       : Watch Dubbed Anime                                    
     -d                          : Download Mode             
     -H                          : Play Anime from History
     -D                          : Reset History File
-    --hist-limit=[n]            : Limit the number of history choices to be showed up in stdout (default: 25)
+    --hist-limit=[n]            : Limit the number of history choices to be showed up in stdout (default: 15)
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
@@ -142,14 +145,16 @@ Vibration/Notification Signal, you can identify it when:
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
 
-+ History Paging<br>
++ History Sub-Commands<br>
 `next` — to go to the next page<br>
-`prev` — to go to the previous page
+`prev` — to go to the previous page<br>
+`[n]n` — pick and proceed to next episode<br>
+`[n]p` — pick and proceed to previous episode
 
 + Keybindings on Picker<br>
    - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
-   - <kbd>W</kbd> or <kbd>Button UP</kbd>		— to go up
-   - <kbd>S</kbd> or <kbd>Button Down</kbd>	— to go down
+   - <kbd>W</kbd> or <kbd>↑</kbd>		— to go up
+   - <kbd>S</kbd> or <kbd>↓</kbd>	— to go down
    - <kbd>PGUP</kbd>			— to go to the First Choice
    - <kbd>PGDN</kbd>			— to go to the Last Choice
 

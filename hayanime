@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.0"
+VERSION="v2.4.1"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -22,9 +22,9 @@ base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
 base_url_go="https://goload.pro"
 search_base_api="https://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
-user_agent='Mozilla/5.0 (Linux; Android 8.1.0; vivo 1801) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/10.2 Chrome/71.0.3578.99 Mobile Safari/537.36'
+user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 termcols="${COLUMNS:-$(stty size)}" termcols="${termcols##* }"
-currtrunc="$(printf '%s' "${PWD:-$(pwd)}" | sed -E 's_(.{10}).*(.{20})_\1...\2_g')"
+currtrunc="${PWD:-$(pwd)}" currtrunc="../${currtrunc##*/}"
 userguest="$(id -un)"
 saveterm="$(stty -g)"
 defifs="${IFS}"
@@ -33,7 +33,7 @@ download_mode="false"
 debug_mode="false"
 dry_run="false"
 ffmp_temp=".piece"
-ffmp_j=".tmpjob"
+ffmp_purl=".piecesUrl"
 
 # Default player depends on platform
 case "$(uname -a)" in
@@ -61,7 +61,7 @@ save_terminal(){
 sanitize_terminal(){
 	printf '%b' "\033[${1}A"
 	[ -n "${4}" ] && printf '%b' "\033[${4}B"
-	printf "%${2}s" | sed "s_[[:space:]]_\n$(printf "\033[2K\r%${termcols}s")_g"
+	printf "%${2}s" | sed "s_[[:space:]]_\n$(printf "\033[2K\r")_g"
 	[ -n "${3}" ] && printf '%b' "\033[${3}A"
 }
 
@@ -74,7 +74,7 @@ showCursor(){
 }
 
 cleanup_trap(){
-	for temps in tmpvid.ts ~/.piece ~/.tmpjob; do
+	for temps in tmpvid.ts ~/.piece ~/.vstats ~/.piecesUrl; do
 		[ -e "${temps}" ] && rm -rdf "${temps}"
 	done
 }
@@ -157,8 +157,8 @@ dl_manager(){
 			xco="${?}"
 			;;
 		*.m3u8*)
-			dep_check "ffmpeg" "openssl"
-			ffmpegdler "${2}" "${1}" "${qualvidman}" "${3}" 
+			dep_check "ffmpeg" "openssl" "aria2c"
+			ffmpegdler "${2}" "${1}" "${qualvid}" "${3}" 
 			xco="${?}"
 			;;
 		*)
@@ -177,17 +177,20 @@ dl_manager(){
 }
 
 ffmpegdler(){
-	ts_data_fir="$(curl -sLk "${1}")" || return 1
-	selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x${3}/{n;p;}")"
-	[ -z "${selc_qual}" ] && inf "Quality Not Found, Switching to High" && selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x720/{n;p;}")"
+	ts_data_fir="$(curl -sLfk "${1}")" || return 1
+	quallist_vid_ind="$(printf '%s' "${ts_data_fir}" | sed -nE '/#EXT-X-STREAM/!d;s_.*x([0-9]*),.*_\1_p' | sort -nr)"
+	[ "${3}" = "last" ] && selc_pix="$(printf '%s' "${quallist_vid_ind}" | tail -n 1)"
+	[ -z "${selc_pix}" ] && selc_pix="$(printf '%s' "${quallist_vid_ind}" | sed -n "${3}"p)"
+	selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x${selc_pix}/{n;p;q}")"
+	[ -z "${selc_qual}" ] && inf "Quality Not Found, Switching to High" && selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x$(printf '%s' "${quallist_vid_ind}" | head -n 1)/{n;p;q}")"
 	[ -d ~/"${ffmp_temp}" ] || mkdir -p ~/"${ffmp_temp}"
 	# Get Relative Path, when it is not fully sourced into stream url
-	if ! printf '%s' "${ts_data_fir}" | grep -q 'http'; then
+	if ! printf '%s' "${selc_qual}" | grep -q 'http'; then
 		relpath="${1%/*}/"
 	fi
 	aud_perf="$(printf '%s' "${ts_data_fir}" | sed -nE 's_^#EXT-X-MEDIA:TYPE=AUDIO.*audio-0.*URI="([^\"]*)".*_\1_p')"
 	# 2nd step get the 2nd layer which is the TS files
-	ts_data_sec="$(curl -sLk "${relpath}${selc_qual}")"
+	ts_data_sec="$(curl -sLfk "${relpath}${selc_qual}")" || return 1
 	enc_key="$(printf "%s" "${ts_data_sec}" | sed -nE 's_^#EXT-X-KEY.*URI="([^"]*)"_\1_p')"
 	if [ -n "${enc_key}" ]; then
 		dec_key="$(curl -sLk "${enc_key}" | od -A n -t x1 | tr -d ' |\n')"
@@ -202,22 +205,18 @@ ffmpegdler(){
 		relpath="${1%/*}/"
 	fi
 	total_pieces="$(printf '%s\n' "${pieces_data}" | wc -l)"
-	unset i
-	while [ "$((i += 1))" -le "${total_pieces}" ]; do
-		curl -sLk "${relpath}$(printf "%s" "${pieces_data}" | sed -n "${i}p")" > ~/"${ffmp_temp}/$(printf "%04d" "${i}").ts" && progbar "${i}" "${total_pieces}" "Processing Pieces..." &
-		jobs -p > ~/"${ffmp_j}"
-		while [ "$(wc -w < ~/"${ffmp_j}")" -ge 36 ]; do
-			jobs > ~/"${ffmp_j}"
-			sleep 0.03
-		done
-	done
-	wait
+	awk -v "r=${relpath}" '{printf("%s%s\n  %s%04d%s\n", r, $1, "out=", NR, ".ts")}' > ~/"${ffmp_purl}" <<-END
+	${pieces_data}
+	END
+	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide"
 	if [ -n "${enc_key}" ]; then
-		for i in ~/"${ffmp_temp}"/*;do
+		for i in ~/"${ffmp_temp}"/*; do
+			: "$((in+=1))"
+			progbar "${in}" "${total_pieces}" "Decrypting..."
 			openssl aes-128-cbc -d -K "${dec_key}" -iv "${dec_iv}" -nopad < "${i}" >> "tmpvid.ts"
-   	done
-   else
-   	cat ~/"${ffmp_temp}"/* >> "tmpvid.ts"
+		done
+	else
+		cat ~/"${ffmp_temp}"/* >> "tmpvid.ts"
 	fi
 	# Check if audio was seperated to ts streams to merge it
 	if [ -n "${aud_perf}" ]; then
@@ -227,7 +226,7 @@ ffmpegdler(){
 	fi
 	cleanup_trap
 	# Unset all variables for reusing function
-	unset ts_data_fir selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces i
+	unset ts_data_fir quallist_vid_ind selc_pix selc_qual relpath ts_data_sec enc_key dec_key enc_iv dec_iv pieces_data total_pieces in
 	return 0
 }
 
@@ -254,42 +253,42 @@ hist_handler(){
 			hist_count_persi="$(printf '%s' "${hist_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
 			unset pages_total
 			until [ -z "${hist_count%%-*}" ] || [ "${hist_count}" = "0" ]; do
-				: "$((hist_count -= hist_limt))"
-				: "$((pages_total += 1))"
+				: "$((hist_count -= hist_limt))" "$((pages_total += 1))"
 			done
 			[ "${hist_count_persi}" = "0" ] && die "1" "History File is Empty, Watch anime first"
 			table_ui_hist "${hist_data}"
 			input_questions "Pick a Number: "
 			read -r hist_picked
 			while true; do
-				case "${hist_picked}" in
-					[0-9]*)
-						if [ "${hist_picked:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
-							err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
-							input_questions 'Pick a Number: '
-							read -r hist_picked
-						else
-							break
-						fi
-						;;
-					[Nn]ext|[Pp]rev|[Bb]ack)
-						break
-						;;
-					*)
-						err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
+				if printf '%s' "${hist_picked}" | grep -qE '(^[1-9][0-9]*$|^[1-9][0-9]*[NPnp]$)'; then
+					hist_picked_d="${hist_picked%%[NPnp]*}"
+					if [ "${hist_picked_d:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
+						err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
 						input_questions 'Pick a Number: '
 						read -r hist_picked
-						;;
-				esac
+					else
+						break
+					fi
+				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack'; then
+					break
+				else
+					err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
+					input_questions 'Pick a Number: '
+					read -r hist_picked
+				fi
 			done
+			if printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Nn]$'; then
+				solv="1" hist_picked="${hist_picked_d}"
+			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Pp]$'; then
+				solv="-1" hist_picked="${hist_picked_d}"
+			fi
 			case "${hist_picked}" in
 				[Nn]ext)
 					if [ "${cur_page_hist}" -ge "${pages_total}" ]; then 
 						err "Theres no next page"
 						sleep 0.5
 					else
-						: "$((page_comp += hist_limt))"
-						: "$((cur_page_hist += 1))"
+						: "$((page_comp += hist_limt))" "$((cur_page_hist += 1))"
 					fi
 					;;
 				[Pp]rev|[Bb]ack)
@@ -297,11 +296,10 @@ hist_handler(){
 						err "Theres no previous page"
 						sleep 0.5
 					else
-						: "$((page_comp -= hist_limt))"
-						: "$((cur_page_hist -= 1))"
+						: "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					fi
 					;;
-				0)
+				0*)
 					save_terminal
 					exit 0
 					;;
@@ -315,15 +313,15 @@ hist_handler(){
 		query_result="${hist_data%%¢*}#"
 		ani_searched="$(printf '%s' "${hist_data}" | sed -E 's_.*¢(.*)€.*_\1_g')"
 		ani_selected="1" qual_stream="high" query_count="1"
-		epi_selected="$(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g')"
+		epi_selected="$(($(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g') + ${solv:-0} ))"
 		player="${hist_data##*£}"
 	fi
 }
 
 idx_comp(){
-	stream_ind="$(curl -sLk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')"
+	stream_ind="$(curl -sLk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')" || qualvid="auto" && return 1
 	for qual_var in ${qualvidman} 1080 720 480 360 240; do
-		qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qual_var}" | cut -d':' -f 1)"
+		qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qual_var}")" qualvid="${qualvid%%:*}"
 		[ -n "${qualvid}" ] && break
 		inf "Quality not found, Switching to highest quality as possible"
 		unset qualvid
@@ -412,18 +410,18 @@ show_help(){
 	
 	 Usage:
 	    ${0##*/} [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
-	    ${0##*/} [-H] [-s <server>] [--hist-limit="n"]
+	    ${0##*/} [--hist-limit="n"] [-H] [-s <server>]
 	    ${0##*/} -v | -h | -D | -u
 		
 	 Options:
 	    -q [low|normal|high]\t: Choose specific quality
 	    -s [default|(1-5)]\t\t: Select server
-	    -p [vlc|built-in]\t\t: Use specific video player (default: mpv)
+	    -p [vlc|built-in]\t\t: Use specific video player (default based on OS)
 	    --dub\t\t\t: Watch Dubbed Anime
 	    -d\t\t\t\t: Download Mode
 	    -H\t\t\t\t: Play Anime from History
 	    -D\t\t\t\t: Reset History File
-	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 25)
+	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 15)
 	    -u\t\t\t\t: Update to the latest Version
 	    -v\t\t\t\t: Print Version and Exit
 	    -h\t\t\t\t: Print Help
@@ -517,7 +515,7 @@ choose_from_menu(){
 				showCursor
 				exit 0
 				;;
-			h|H)
+			[Hh])
 				sanitize_terminal "$((count + 1))" "$((count + 1))" "$((count + 1))"
 				while IFS= read -r lines; do
 					suc "${lines}"
@@ -574,17 +572,18 @@ ffmpeg_prog(){
 	while [ -e "/proc/${ffmpeg_pid}" ]; do
 		if [ -e ~/.vstats ]; then
 			cur_frame="$(grep "frame=" ~/.vstats | tail -n 1)" cur_frame="${cur_frame##*=}"
-			cur_bitr="$(grep "bitrate=" ~/.vstats | tail -n 1)" cur_bitr="${cur_bitr##*=}"
+			last_size="${cur_size}"
+			cur_size="$(grep "total_size=" ~/.vstats | tail -n 1)" cur_size="${cur_size##*=}"
 			if [ -n "${cur_frame}" ]; then
 				progbar "${cur_frame:-0}" "${total_frames}" "Status: ${cur_frame:-0}/${total_frames}"
-				printf '\n\033[2K%s\n\033[2K%s\n\033[2K%s\033[3A' "ffmpeg PID: ${ffmpeg_pid:-0}" "Length: ${vid_dur:-00:00}" "Bitrate: ${cur_bitr:-0kbits/s}"
+				printf '\n\033[2K%s\n\033[2K%s\n\033[2K%s\033[3A' "ffmpeg PID: ${ffmpeg_pid:-0}" "Length: ${vid_dur:-00:00}" "Speed: $(awk -v "byte=$((cur_size - ${last_size:-0}))" 'BEGIN{ x=1024; y=byte/x/x; printf("%.2f", y)}')mb/hs"
 			fi
 			sleep 0.5	# Interval to avoid using too much memory (adjust if you want)
 		fi
 	done
 	save_terminal
 	sanitize_terminal 5 4 4 4
-	[ -e ~/.vstats ] && rm ~/.vstats
+	cleanup_trap
 	unset inf_meta vid_dur vid_fps hrs mins secs vid_time total_frames ffmpeg_pid cur_frame cur_bitr
 }
 
@@ -594,7 +593,7 @@ progbar(){
 	left="$(( 40 - done ))"
 	fill="$(printf "\033[7m\033[38;5;$(( (done % 103 / 20) + 101 ))m%${done}s\033[0m")"
 	empty="$(printf "%${left}s")"
-	printf '\033[2K\r%s %s   %s' "[${fill}${empty}]" "${prog}%" "${3}"
+	printf '\033[2K\r%s — %s : %s' "¦${fill}${empty}¦" "${prog}%" "${3}"
 	unset prog "done" left fill empty
 }
 
@@ -631,6 +630,7 @@ selector(){
 		err "Out of Bounds... Pick between 1-${query_count}, or type 0 to exit."
 		input_questions 'Pick Here By Number: '
 		read -r ani_selected
+		ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	done
 	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
 	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s_(.*)#.*_${base_url}\1_")"
@@ -677,6 +677,7 @@ qualitypicker(){
 		if printf '%s' "${server}" | grep -qE 'dood|mpup' || [ "${player}" = "built-in" ]; then
 			qual_stream="high"
 		fi
+		[ "${download_mode}" = "true" ] && unset qual_stream
 		[ -z "${qual_stream}" ] && input_questions 'Quality: ' && read -r qual_stream
 	fi
 }
@@ -768,7 +769,10 @@ streaming_url_server(){
 		vim)
 			cust_referer="vimeo.com"
 			[ "${qualvidman}" = "480" ] && qualvidman="520"
-			main_streaming="$(curl -skL "https://player.vimeo.com/video/${1}" | sed -nE 's_.*\{"akfire\_interconnect\_quic":\{"url":"([^\"]*)","origin":"gcs","avc\_url":"[^\"]*".*fastly\_skyfire":\{"url":"([^\"]*)".*_\1\n\2_p' | tail -n 1)"
+			main_streaming="$(curl -skL "https://player.vimeo.com/video/${1}" | sed -nE 's_.*\{"akfire\_interconnect\_quic":\{"url":"([^\"]*)","origin":"gcs","avc\_url":"[^\"]*".*fastly\_skyfire":\{"url":"([^\"]*)".*_\1€\2_p')"
+			strip_main="${main_streaming%%€*}"
+			[ -z "${strip_main}" ] && strip_main="${main_streaming##*€}"
+			main_streaming="${strip_main}"
 			;;
 		# Catch Direct
 		defdir)
@@ -785,21 +789,18 @@ streaming_url_server(){
 			;;
 	esac
 	if [ "${dry_run}" != "true" ]; then
-		(curl -sLk "${main_streaming}" | grep -q '[Ee]rror' || [ -z "${main_streaming}" ]) && die "1" "Failed to retrieve streams from server"
+		[ -z "${main_streaming}" ] && die "1" "Failed to retrieve streams from server"
 	fi
 }
 
 quality_selector(){
 	case ${qual_stream:-high} in
-		[Nn]ormal|[Nn]|720)
-			qualvidman="720"
-			;;
-		worst|[Ll]ow|[Ll]|360)
+		[Nn]ormal|[Nn]|720)	qualvidman="720" qualvid="2"	;;
+		[Ww]orst|[Ll]ow|[Ll]|360)
 			[ "${server}" = "fembed" ] && qualvidman="480" || qualvidman="360"
+			qualvid="last"
 			;;
-		best|[Hh]igh|[Hh]|1080|*)
-			qualvidman="1080"
-			;;
+		[Bb]est|[Hh]igh|[Hh]|1080|*)	qualvidman="1080" qualvid="1"	;;
 	esac
 }
 
