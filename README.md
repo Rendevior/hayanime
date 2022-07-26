@@ -144,12 +144,14 @@ Vibration/Notification Signal, you can identify it when:
 ## Features
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
+  > **Note**: Picking Ranges of episode is supported only in Downloading
 
 + History Sub-Commands<br>
 `next` — to go to the next page<br>
-`prev` — to go to the previous page<br>
+`prev` | `back` — to go to the previous page<br>
 `[n]n` — pick and proceed to next episode<br>
-`[n]p` — pick and proceed to previous episode
+`[n]p` — pick and proceed to previous episode<br>
+`[n]d` — delete a specific entry from history
 
 + Keybindings on Picker<br>
    - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
@@ -164,4 +166,4 @@ Vibration/Notification Signal, you can identify it when:
 [GPL-3.0 license](https://github.com/TheGlockMisc/hayanime/blob/master/LICENSE)
 
 ## Bugs & Issues
-+ If you found some bugs, feel free to create a New Issue (PRs OPEN)
+- If you found some bugs, feel free to create a New Issue (PRs OPEN)
