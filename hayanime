@@ -163,7 +163,7 @@ dl_manager(){
 		*)
 			dep_check "aria2c"
 			printf '%b' "\n"
-			aria2c -x 5 -s 5 --console-log-level="error" --user-agent="${user_agent}" --referer="${1}" --check-certificate="false" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
+			aria2c -x 5 -s 5 --console-log-level="error" --user-agent="${user_agent}" --referer="${1}" --check-certificate="false" --summary-interval="0" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
 			xco="${?}"
 			;;
 	esac
@@ -203,11 +203,11 @@ ffmpegdler(){
 	else
 		relpath="${1%/*}/"
 	fi
-	total_pieces="$(printf '%s\n' "${pieces_data}" | wc -l)"
+	total_pieces="$(printf '%s\n' "${pieces_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
 	awk -v "r=${relpath}" '{printf("%s%s\n  %s%04d%s\n", r, $1, "out=", NR, ".ts")}' > ~/"${ffmp_purl}" <<-END
 	${pieces_data}
 	END
-	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide"
+	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide" --summary-interval="0"
 	if [ -n "${enc_key}" ]; then
 		for i in ~/"${ffmp_temp}"/*; do
 			: "$((in+=1))"
@@ -241,7 +241,7 @@ hist_handler(){
 			hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
 			main_interface
 			case "${hist_picked}" in
-				cont|[Nn]ext|[Pp]rev|[Bb]ack)
+				cont|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate)
 					[ "${hist_picked}" = "cont" ] && [ "${hist_count_persi}" = "1" ] && : "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
 					;;
@@ -257,24 +257,24 @@ hist_handler(){
 			done
 			[ "${hist_count_persi}" = "0" ] && die "1" "History File is Empty, Watch anime first"
 			table_ui_hist "${hist_data}"
-			input_questions "Pick a Number: "
+			input_questions ">> "
 			read -r hist_picked
 			while true; do
 				if printf '%s' "${hist_picked}" | grep -qE '(^[1-9][0-9]*$|^[1-9][0-9]*[NPDnpd]$)'; then
 					hist_picked_d="${hist_picked%%[NPDnpd]*}"
 					if [ "${hist_picked_d:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
 						err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
-						input_questions 'Pick a Number: '
+						input_questions ">> "
 						read -r hist_picked
 						continue
 					else
 						break
 					fi
-				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack'; then
+				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate'; then
 					break
 				else
 					err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
-					input_questions 'Pick a Number: '
+					input_questions ">> "
 					read -r hist_picked
 				fi
 			done
@@ -307,6 +307,10 @@ hist_handler(){
 						: "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					fi
 					;;
+				[Uu]pdate)
+					hist_update
+					sleep 1
+					;;
 				0*)
 					save_terminal
 					exit 0
@@ -321,9 +325,26 @@ hist_handler(){
 		query_result="${hist_data%%¢*}#"
 		ani_searched="$(printf '%s' "${hist_data}" | sed -E 's_.*¢(.*)€.*_\1_g')"
 		ani_selected="1" qual_stream="high" query_count="1"
-		epi_selected="$(($(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g') + ${solv:-0} ))"
+		epi_selected="$(($(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g;s_/.*__g') + ${solv:-0} ))"
 		player="${hist_data##*£}"
 	fi
+}
+
+hist_update(){
+	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
+	while read -r entry; do
+		: "$((entriter += 1))"
+		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
+		(tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')" ; sed -i "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist) &
+		progbar "${entriter}" "${hist_count}" "Updating..."
+		if [ "$(jobs -p | grep -c '$')" -gt 5 ]; then
+			wait "${!}"
+		fi
+		unset cur_ep
+	done < ~/.hayanihist
+	wait "${!}"
+	unset entriter
+	suc "\033[2K\rHistory file successfully updated!"
 }
 
 idx_comp(){
@@ -430,6 +451,7 @@ show_help(){
 	    -H\t\t\t\t: Play Anime from History
 	    -D\t\t\t\t: Reset History File
 	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 15)
+	    --histup\t\t\t: Update the entries (for checking new episode released)
 	    -u\t\t\t\t: Update to the latest Version
 	    -v\t\t\t\t: Print Version and Exit
 	    -h\t\t\t\t: Print Help
@@ -460,13 +482,15 @@ table_ui(){
 	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
 	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
+		: "$((coldep += 1))"
 		len="$((termcols - ${#line}))"
-		printf "\033[48;5;236m%s%${len}s\033[0m" "${line}"
+		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
+		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
 	${data}
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
-	unset data line len
+	unset data line len coldep
 }
 
 table_ui_hist(){
@@ -474,13 +498,15 @@ table_ui_hist(){
 	data="$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')"
 	printf "\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
 	while IFS= read -r line; do
+		: "$((coldep += 1))"
 		len="$((termcols - ${#line}))"
-		printf "\033[48;5;236m%s%${len}s\033[0m" "${line}"
+		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
+		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
 	${data}
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
-	unset data line len
+	unset data line len coldep
 }
 
 choose_from_menu(){
@@ -520,8 +546,7 @@ choose_from_menu(){
 				[ "${cur}" -ge "${count}" ] && cur="$(( count - 1 ))"
 				;;
 			"${escchar}"|[Qq])
-				showCursor
-				exit 0
+				die "0"
 				;;
 			[Hh])
 				sanitize_terminal "$((count + 1))" "$((count + 1))" "$((count + 1))"
@@ -844,7 +869,7 @@ loop(){
 		main
 		launch_vid
 		main_interface
-		hist_handler "append" "${anime_selected}" "${anime_name_crafted}" "${epi_selected}" "${player}"
+		hist_handler "append" "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
 		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-20))}/ s_(.{$((termcols-29))}).*(.{7}\$)_\\1...\\2_g")"
 		formatter_title="$(printf '%b' "Now Playing: \033[4m\033[48;5;240m${trunc_aniname}\033[0m [${epi_selected}/${epi_total}]")"
 		printf "%*s\n\n" "$(((${#formatter_title}+termcols+18)/2))" "${formatter_title}"
@@ -1061,7 +1086,8 @@ arg_parser(){
 					dub)	dub_mode="true"	;;
 					help)	show_help && exit 0	;;
 					debug)	debug_mode="true"	;;
-					*hist-limit*)	hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"	;;
+					*hist-limit*)	hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"	hist_limt="${hist_limt##0}"	;;
+					histup) hist_update && die 0	;;
 					*)
 						err "[--${OPTARG}]: Illegal Option"
 						show_help
@@ -1106,5 +1132,5 @@ arg_parser(){
 
 # Call Functions
 arg_parser "${@}"
-dep_check "curl" "sed" "grep" "awk" "base64" "od" "wc" "diff" "patch"
+dep_check "curl" "sed" "grep" "awk" "base64" "od" "diff" "patch"
 main_exec
