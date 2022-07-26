@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.1"
+VERSION="v2.4.2"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -32,8 +32,7 @@ server="default"
 download_mode="false"
 debug_mode="false"
 dry_run="false"
-ffmp_temp=".piece"
-ffmp_purl=".piecesUrl"
+ffmp_temp=".piece" ffmp_purl=".piecesUrl"
 
 # Default player depends on platform
 case "$(uname -a)" in
@@ -106,7 +105,7 @@ input_questions(){
 
 # Misc and Tools
 update_script(){
-	script_ind="$(curl -sLk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "1" "An error occured while retrieving from github"
+	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "1" "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	if [ -z "${script_ind}" ]; then
 		suc "Cool, Script is up to date!"
@@ -238,11 +237,12 @@ hist_handler(){
 		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
 	else
 		hist_limt="${hist_limt:-15}"
-		hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
 		while true; do
+			hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
 			main_interface
 			case "${hist_picked}" in
-				[Nn]ext|[Pp]rev|[Bb]ack)
+				cont|[Nn]ext|[Pp]rev|[Bb]ack)
+					[ "${hist_picked}" = "cont" ] && [ "${hist_count_persi}" = "1" ] && : "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
 					;;
 				*)
@@ -260,12 +260,13 @@ hist_handler(){
 			input_questions "Pick a Number: "
 			read -r hist_picked
 			while true; do
-				if printf '%s' "${hist_picked}" | grep -qE '(^[1-9][0-9]*$|^[1-9][0-9]*[NPnp]$)'; then
-					hist_picked_d="${hist_picked%%[NPnp]*}"
+				if printf '%s' "${hist_picked}" | grep -qE '(^[1-9][0-9]*$|^[1-9][0-9]*[NPDnpd]$)'; then
+					hist_picked_d="${hist_picked%%[NPDnpd]*}"
 					if [ "${hist_picked_d:-$((hist_count_persi + 2))}" -gt "${hist_count_persi}" ]; then
 						err "Out of Bounds... Pick between 1-${hist_count_persi}, or type 0 to exit."
 						input_questions 'Pick a Number: '
 						read -r hist_picked
+						continue
 					else
 						break
 					fi
@@ -281,6 +282,13 @@ hist_handler(){
 				solv="1" hist_picked="${hist_picked_d}"
 			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Pp]$'; then
 				solv="-1" hist_picked="${hist_picked_d}"
+			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Dd]$'; then
+				calc_indhist="$(( 1 + hist_count_or - (hist_limt * ${cur_page_hist:-1} - hist_limt + hist_picked_d) ))"
+				sed -i "${calc_indhist}"d ~/.hayanihist
+				suc "The ${hist_picked_d}th entry on Page ${cur_page_hist:-1} was successfully deleted"
+				sleep 0.5
+				hist_picked="cont"
+				continue
 			fi
 			case "${hist_picked}" in
 				[Nn]ext)
@@ -319,7 +327,7 @@ hist_handler(){
 }
 
 idx_comp(){
-	stream_ind="$(curl -sLk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')" || qualvid="auto" && return 1
+	stream_ind="$(curl -sLfk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')" || qualvid="auto" && return 1
 	for qual_var in ${qualvidman} 1080 720 480 360 240; do
 		qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qual_var}")" qualvid="${qualvid%%:*}"
 		[ -n "${qualvid}" ] && break
@@ -609,7 +617,7 @@ search(){
 
 result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
-	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}&origin=1&root=animixplay.to" | tr -d "\\\\" | grep -oP 'name.*?a href="([^"]*)".*?title="([^"]*)".*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
+	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die "1" "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
@@ -660,7 +668,7 @@ episode_selector(){
 	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 	epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	while [ "${epi_whole:-$((epi_total + 2))}" -gt "${epi_total}" ]; do
-		err "Episode does not Exist"
+		err "Episode does not exist."
 		input_questions "Episode [1-${epi_total}]: "
 		read -r epi_selected
 		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
@@ -727,9 +735,7 @@ streaming_url_server(){
 			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362/616e696d646c616e696d646c7c7c363136653639366436343663363136653639366436343663376337633631366536393664363436633631366536393664363436633763376336313665363936643634366336313665363936643634366337633763373337343732363536313664373336327c7c616e696d646c616e696d646c7c7c73747265616d7362"
 			for try_sources in sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
 				main_streaming="$(curl -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
-				if printf '%s' "${main_streaming}" | grep -q "client="; then
-					break
-				fi
+				printf '%s' "${main_streaming}" | grep -q "client=" && break
 			done
 			;;
 		fembed)
@@ -743,7 +749,7 @@ streaming_url_server(){
 			done
 			;;
 		dood)
-			dood_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
+			dood_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
 			cust_referer="https://dood.pm/e/${dood_id}"
 			dood_path="$(curl -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(awk 'BEGIN {srand(); print srand()}')"
@@ -753,7 +759,7 @@ streaming_url_server(){
 			fi
 			;;
 		mpup)
-			mpupurl="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}"  | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
+			mpupurl="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
 			main_streaming="$(curl -skLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
 			cust_referer="${main_streaming}"
 			;;
