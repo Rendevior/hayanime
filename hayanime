@@ -233,7 +233,7 @@ hist_handler(){
 	[ -e ~/.hayanihist ] || touch ~/.hayanihist 2>/dev/null		# Supress Incase of the Directory is Unwritable
 	if [ "${1}" = "append" ]; then
 		[ -w ~/.hayanihist ] || die "1" "Hist file is Unwritable, Make sure you have access to write to HOME directory"
-		sed -i "/${3}/d" ~/.hayanihist
+		sed "/${3}/d" ~/.hayanihist > ~/.hayanihist.tmp && mv ~/.hayanihist.tmp ~/.hayanihist
 		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
 	else
 		hist_limt="${hist_limt:-15}"
@@ -284,7 +284,7 @@ hist_handler(){
 				solv="-1" hist_picked="${hist_picked_d}"
 			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Dd]$'; then
 				calc_indhist="$(( 1 + hist_count_or - (hist_limt * ${cur_page_hist:-1} - hist_limt + hist_picked_d) ))"
-				sed -i "${calc_indhist}"d ~/.hayanihist
+				sed "${calc_indhist}"d ~/.hayanihist > ~/.hayanihist.tmp && mv ~/.hayanihist.tmp ~/.hayanihist
 				suc "The ${hist_picked_d}th entry on Page ${cur_page_hist:-1} was successfully deleted"
 				sleep 0.5
 				hist_picked="cont"
@@ -332,18 +332,14 @@ hist_handler(){
 
 hist_update(){
 	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
-	cp ~/.hayanihist ~/.hayanihist.tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
 		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
-		(tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')" ; sed -i "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp) &
+		tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
+		printf '%s\n' "${entry}" | sed "s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" >> ~/.hayanihist.tmp
 		progbar "${entriter}" "${hist_count}" "Updating..."
-		if [ "$(jobs -p | grep -c '$')" -gt 5 ]; then
-			wait "${!}"
-		fi
 		unset cur_ep
 	done < ~/.hayanihist
-	wait "${!}"
 	mv ~/.hayanihist.tmp ~/.hayanihist && cleanup_trap
 	unset entriter
 	suc "\033[2K\rHistory file successfully updated!"
