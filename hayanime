@@ -339,7 +339,11 @@ hist_update(){
 		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
 		(
 			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-			[ -z "${tot_ep}" ] && printf "\033[38;5;1m\033[2K\r%b\033[0m" "Failed to Retrieve data." && : > .hayanihist.tmp && exit 1
+			if [ -z "${tot_ep}" ]; then
+				printf "\033[38;5;1m\033[2K\r%b\033[0m" "Failed to Retrieve data."
+				: > .hayanihist.tmp
+				exit 1
+			fi
 			printf '%s' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp)" > ~/.hayanihist.tmp
 		) &
 		progbar "${entriter}" "${hist_count}" "Updating..."
