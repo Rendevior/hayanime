@@ -105,18 +105,18 @@ input_questions(){
 
 # Misc and Tools
 update_script(){
-	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die "1" "An error occured while retrieving from github"
+	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die 1 "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	if [ -z "${script_ind}" ]; then
 		suc "Cool, Script is up to date!"
-		die "0"
+		die 0
 	else
 		if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
 			printf '%b' "\007"
 			suc "Script has been sucessfully Updated, Enjoy!"
-			die "0"
+			die 0
 		else
-			die "1" "Can't update, An Exception Occured. Or it might be can't write the update to file (Make sure you run it as an Administrator/Sudo user)"
+			die 1 "Can't update, An Exception Occured. Or it might be can't write the update to file (Make sure you run it as an Administrator/Sudo user)"
 		fi
 	fi
 }
@@ -232,8 +232,8 @@ ffmpegdler(){
 hist_handler(){
 	[ -e ~/.hayanihist ] || touch ~/.hayanihist 2>/dev/null		# Supress Incase of the Directory is Unwritable
 	if [ "${1}" = "append" ]; then
-		[ -w ~/.hayanihist ] || die "1" "Hist file is Unwritable, Make sure you have access to write to HOME directory"
-		sed "/${3}/d" ~/.hayanihist > ~/.hayanihist.tmp && mv ~/.hayanihist.tmp ~/.hayanihist
+		[ -w ~/.hayanihist ] || die 1 "Hist file is Unwritable, Make sure you have access to write to HOME directory"
+		printf '%s' "$(sed "/${3}/d" ~/.hayanihist)" > ~/.hayanihist
 		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
 	else
 		hist_limt="${hist_limt:-15}"
@@ -255,7 +255,7 @@ hist_handler(){
 			until [ -z "${hist_count%%-*}" ] || [ "${hist_count}" = "0" ]; do
 				: "$((hist_count -= hist_limt))" "$((pages_total += 1))"
 			done
-			[ "${hist_count_persi}" = "0" ] && die "1" "History File is Empty, Watch anime first"
+			[ "${hist_count_persi}" = "0" ] && die 1 "History File is Empty, Watch anime first"
 			table_ui_hist "${hist_data}"
 			input_questions ">> "
 			read -r hist_picked
@@ -284,7 +284,7 @@ hist_handler(){
 				solv="-1" hist_picked="${hist_picked_d}"
 			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Dd]$'; then
 				calc_indhist="$(( 1 + hist_count_or - (hist_limt * ${cur_page_hist:-1} - hist_limt + hist_picked_d) ))"
-				sed "${calc_indhist}"d ~/.hayanihist > ~/.hayanihist.tmp && mv ~/.hayanihist.tmp ~/.hayanihist
+				printf '%s' "$(sed "${calc_indhist}"d ~/.hayanihist)" > ~/.hayanihist
 				suc "The ${hist_picked_d}th entry on Page ${cur_page_hist:-1} was successfully deleted"
 				sleep 0.5
 				hist_picked="cont"
@@ -332,14 +332,22 @@ hist_handler(){
 
 hist_update(){
 	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
+	[ "${hist_count}" = "0" ] && die 1 "Theres no to update, History is Empty"
+	cp ~/.hayanihist ~/.hayanihist.tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
 		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
-		tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-		printf '%s\n' "${entry}" | sed "s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" >> ~/.hayanihist.tmp
+		(
+			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
+			[ -z "${tot_ep}" ] && printf "\033[38;5;1m\033[2K\r%b\033[0m" "Failed to Retrieve data." && : > .hayanihist.tmp && exit 1
+			printf '%s' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp)" > ~/.hayanihist.tmp
+		) &
 		progbar "${entriter}" "${hist_count}" "Updating..."
+		[ "$(jobs -p | awk 'BEGIN{c=0} //{c++} END{print c}')" -gt 2 ] && wait "${!}"
 		unset cur_ep
 	done < ~/.hayanihist
+	wait "${!}"
+	[ -z "$(cat ~/.hayanihist.tmp)" ] && die 1 "\033[2K\rFailed to Update..."
 	mv ~/.hayanihist.tmp ~/.hayanihist && cleanup_trap
 	unset entriter
 	suc "\033[2K\rHistory file successfully updated!"
@@ -544,7 +552,7 @@ choose_from_menu(){
 				[ "${cur}" -ge "${count}" ] && cur="$(( count - 1 ))"
 				;;
 			"${escchar}"|[Qq])
-				die "0"
+				die 0
 				;;
 			[Hh])
 				sanitize_terminal "$((count + 1))" "$((count + 1))" "$((count + 1))"
@@ -641,12 +649,12 @@ search(){
 result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
 	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
-	[ -z "${query_result}" ] && die "1" "Anime \"${ani_searched:-<empty>}\" Not found"
+	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
 	table_ui "${query_scraped}"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
-	[ "${query_count}" = "0" ] && die "1" "No Results was Found"
+	[ "${query_count}" = "0" ] && die 1 "No Results was Found"
 	[ "${debug_mode}" = "true" ] && debug_handler took-dur "${took_dur}" && debug_handler total-quer "${query_count}"
 }
 
@@ -671,7 +679,7 @@ epi_counter(){
 	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')"
 	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
 	if [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; then
-		die "1" "Anime is Not released yet, Or your IP is Blocked"
+		die 1 "Anime is Not released yet, Or your IP is Blocked"
 	fi
 	if [ "${debug_mode}" = "true" ]; then
 		aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
@@ -721,18 +729,23 @@ id_grepper(){
 	else
 		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
-	[ -z "${idserv}" ] && die "1" "No ID Returned, Episode does not Exist."
+	[ -z "${idserv}" ] && die 1 "No ID Returned, Episode does not Exist."
 	case "${idserv}" in
 		*id=*)	idserv="${idserv##*id=}" idena="yes"	;;
 		*player.html#*)	idserv="${idserv##*\#}" server="defdir"	;;
 		*ed/video/*)	idserv="${idserv##*/}" server="daily"	;;
 		*com/video/*)	idserv="${idserv##*/}" server="vim"	;;
 		*/videoembed/*)	idserv="${idserv##*/}" server="ok" player="mpv"	;;
-		*)	die "1" "Unknown Anime ID returned, please report this bug in Github."	;;
+		*)	die 1 "Unknown Anime ID returned, please report this bug in Github."	;;
 	esac
 	case "${server:-default}" in
 		gogo|sb|fembed|dood|mpup)
-			[ "${idena}" = "yes" ] || die "1" "No ID Returned, Default server is only available at this time"	;;
+			[ "${idena}" = "yes" ] || die 1 "No ID Returned, Default server is only available at this time"
+			[ "${server}" != "gogo" ] && ind_gogoend="$(curl -m 5 -sLk "${base_url_go}/streaming.php" -d "id=${idserv}")"
+			;;
+		default)
+			[ "${dry_run}" = "true" ] && ind_gogoend="$(curl -m 5 -sLk "${base_url_go}/streaming.php" -d "id=${idserv}")"
+			;;
 	esac
 }
 
@@ -740,7 +753,7 @@ streaming_url_server(){
 	if [ "${download_mode}" != "true" ]; then
 		case "${server:=default}" in
 			sb|dood|mpup)
-					[ "${player}" = "built-in" ] && die "1" "Built-in player is not supported in this Server"
+					[ "${player}" = "built-in" ] && die 1 "Built-in player is not supported in this Server"
 				;;
 			ok)
 					[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
@@ -750,21 +763,21 @@ streaming_url_server(){
 	case "${server:=default}" in
 		gogo)
 			cust_referer="gogoanime.fi"
-			main_streaming="$(curl -sLk "${base_url_ani}/player/v1.php?id=${1}" | sed -nE '/file:/ {s_.*file:."([^"]*)".*_\1_p;q}')"
+			main_streaming="$(curl -m 5 -sLk "${base_url_ani}/player/v1.php?id=${1}" | sed -nE '/file:/ {s_.*file:."([^"]*)".*_\1_p;q}')"
 			;;
 		sb)
 			cust_referer="sbplay2.com"
-			sb_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/StreamSB/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/(.*)_\1_' | tr -d '\n' | od -A n -t x1 | tr -d " |\n")"
+			sb_id="$(printf '%s' "${ind_gogoend}" | sed -E '/StreamSB/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/(.*)_\1_' | tr -d '\n' | od -A n -t x1 | tr -d " |\n")"
 			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362/616e696d646c616e696d646c7c7c363136653639366436343663363136653639366436343663376337633631366536393664363436633631366536393664363436633763376336313665363936643634366336313665363936643634366337633763373337343732363536313664373336327c7c616e696d646c616e696d646c7c7c73747265616d7362"
 			for try_sources in sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
-				main_streaming="$(curl -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
+				main_streaming="$(curl -m 5 -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
 				printf '%s' "${main_streaming}" | grep -q "client=" && break
 			done
 			;;
 		fembed)
 			cust_referer="fembed.com"
-			fm_url="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/Xstreamcdn/!d;s_.*data-video="(.*?)".*_\1_;s_/v/_/api/source/_g')"
-			resp_ind="$(curl -sLk -X POST "${fm_url}" -e "${fm_url}" | sed -E 's_\{"file_\n\{"file_g')"
+			fm_url="$(printf '%s' "${ind_gogoend}" | sed -E '/Xstreamcdn/!d;s_.*data-video="(.*?)".*_\1_;s_/v/_/api/source/_g')"
+			resp_ind="$(curl -m 5 -sLk -X POST "${fm_url}" -e "${fm_url}" | sed -E 's_\{"file_\n\{"file_g')"
 			for qual_var in ${qualvidman} 1080 720 480 360 240; do
 				main_streaming="$(printf '%s' "${resp_ind}" | sed -E "/${qual_var}p/"'!d'';s_.*file.*(https.*?)\x22,.*label.*_\1_;s_[\]__g')"
 				[ -n "${main_streaming}" ] && break
@@ -772,33 +785,33 @@ streaming_url_server(){
 			done
 			;;
 		dood)
-			dood_id="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
+			dood_id="$(printf '%s' "${ind_gogoend}" | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
 			cust_referer="https://dood.pm/e/${dood_id}"
-			dood_path="$(curl -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
+			dood_path="$(curl -m 5 -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(awk 'BEGIN {srand(); print srand()}')"
-			main_streaming="$(curl -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
+			main_streaming="$(curl -m 5 -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
 			if printf '%s' "${main_streaming}" | grep -vqE 'dood.vid'; then
 				unset main_streaming
 			fi
 			;;
 		mpup)
-			mpupurl="$(curl -sLk "${base_url_go}/streaming.php" -d "id=${1}" | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
-			main_streaming="$(curl -skLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
+			mpupurl="$(printf '%s' "${ind_gogoend}" | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
+			main_streaming="$(curl -m 5 -skLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
 			cust_referer="${main_streaming}"
 			;;
 		# Substitute Servers
 		daily)
 			cust_referer="https://www.dailymotion.com/"
-			main_streaming="$(curl -sLk "https://www.dailymotion.com/player/metadata/video/${1}" -e "${cust_referer}" | sed -E 's_.*x-mpegURL","url":"(.+?)"}].*_\1_;s_[\]__g')"
+			main_streaming="$(curl -m 5 -sLk "https://www.dailymotion.com/player/metadata/video/${1}" -e "${cust_referer}" | sed -E 's_.*x-mpegURL","url":"(.+?)"}].*_\1_;s_[\]__g')"
 			;;
 		ok)
 			cust_referer="ok.ru"
-			main_streaming="$(curl -skL "https://ok.ru/videoembed/${1}" | sed -nE 's_.*data-module="OKVideo".*data-options="(.*)".*data-player-container-id.*_\1_p' | sed -E 's_\\u0026_\&_g;s_&quot\;_\x22_g;s_[\]__g;s_.*(https://.*videoPlayerCdn[^\x22\x27<>]*).*_\1_')"
+			main_streaming="$(curl -m 5 -skL "https://ok.ru/videoembed/${1}" | sed -nE 's_.*data-module="OKVideo".*data-options="(.*)".*data-player-container-id.*_\1_p' | sed -E 's_\\u0026_\&_g;s_&quot\;_\x22_g;s_[\]__g;s_.*(https://.*videoPlayerCdn[^\x22\x27<>]*).*_\1_')"
 			;;
 		vim)
 			cust_referer="vimeo.com"
 			[ "${qualvidman}" = "480" ] && qualvidman="520"
-			main_streaming="$(curl -skL "https://player.vimeo.com/video/${1}" | sed -nE 's_.*\{"akfire\_interconnect\_quic":\{"url":"([^\"]*)","origin":"gcs","avc\_url":"[^\"]*".*fastly\_skyfire":\{"url":"([^\"]*)".*_\1€\2_p')"
+			main_streaming="$(curl -m 5 -skL "https://player.vimeo.com/video/${1}" | sed -nE 's_.*\{"akfire\_interconnect\_quic":\{"url":"([^\"]*)","origin":"gcs","avc\_url":"[^\"]*".*fastly\_skyfire":\{"url":"([^\"]*)".*_\1€\2_p')"
 			strip_main="${main_streaming%%€*}"
 			[ -z "${strip_main}" ] && strip_main="${main_streaming##*€}"
 			main_streaming="${strip_main}"
@@ -810,15 +823,15 @@ streaming_url_server(){
 			;;
 		# Main Server
 		default|*)
-			[ "${idena}" = "yes" ] || die "1" "No ID Returned, Default server is only available at this time"
+			[ "${idena}" = "yes" ] || die 1 "No ID Returned, Default server is only available at this time"
 			encodeb64="$(printf '%s' "${1}" | base64)"
 			col_craft_st1="$(printf '%s%s%s' "${1}" "LTXs3GrU8we9O" "${encodeb64}" | base64)"
-			main_streaming="$(curl -sk -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
+			main_streaming="$(curl -m 5 -sk -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			;;
 	esac
 	if [ "${dry_run}" != "true" ]; then
-		[ -z "${main_streaming}" ] && die "1" "Failed to retrieve streams from server"
+		[ -z "${main_streaming}" ] && die 1 "Failed to retrieve streams from server"
 	fi
 }
 
@@ -887,10 +900,10 @@ loop(){
 		Search For Another Anime
 		Change Quality
 		Download Episode"
-		[ -z "${menu_result_menu}" ] && die "1" "Unknown Error Appeared"
+		[ -z "${menu_result_menu}" ] && die 1 "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)
-				die "0"
+				die 0
 				;;
 			1)
 				continue
@@ -922,7 +935,7 @@ loop(){
 			6)
 				unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 				if [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ]; then
-					[ "${server}" = "fembed" ] || die "1" "Switching quality in (VLC & builtin) players is not available"
+					[ "${server}" = "fembed" ] || die 1 "Switching quality in (VLC & builtin) players is not available"
 				fi
 				choose_from_menu "\nPick and change your quality:" "High (1080p/Auto)
 				Normal (720p)
@@ -951,7 +964,7 @@ loop(){
 				esac
 				download_mode="true"
 				if [ "${curserv}" = "true" ]; then
-					die "0"
+					die 0
 				else
 					unset menu_result_menu qual_stream main_streaming encodeb64 idserv
 					range_dl_handler
@@ -969,7 +982,7 @@ range_dl_handler(){
 	qualitypicker
 	start_ep="${epi_selected%%-*}"
 	end_ep="${epi_selected##*-}"
-	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die "1" "Out of Range"
+	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die 1 "Out of Range"
 	while [ "${start_ep}" -le "${end_ep:-${start_ep}}" ]; do
 		epi_selected="${start_ep}"
 		episode_selector
@@ -980,7 +993,7 @@ range_dl_handler(){
 		dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"
 		: "$((start_ep += 1))"
 	done
-	die "0"
+	die 0
 }
 
 dryrun_handler(){
@@ -998,7 +1011,7 @@ dryrun_handler(){
 		else
 			err "Server (${server}) Failed"
 		fi
-		die "0"
+		die 0
 	fi
 	unset server player
 	for server in default gogo sb; do
@@ -1020,7 +1033,7 @@ dryrun_handler(){
 			err "Server (${server}) Failed"
 		fi
 	done
-	die "0"
+	die 0
 }
 
 
@@ -1069,7 +1082,7 @@ arg_parser(){
 				hist_handler
 				;;
 			D)
-				[ -e ~/.hayanihist ] || die "1" "Can't clear the file, File does not exist."
+				[ -e ~/.hayanihist ] || die 1 "Can't clear the file, File does not exist."
 				: > ~/.hayanihist
 				exit 0
 				;;
