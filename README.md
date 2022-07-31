@@ -18,13 +18,13 @@ https://user-images.githubusercontent.com/93582751/174440162-86fe9078-678c-46f4-
 ## Installation
 ### Android (Termux)
 Install Dependencies needed
-```
+```sh
 pkg up
 pkg in aria2 ffmpeg openssl-tool -y
 ```
 
 Now Download and Install
-```
+```sh
 curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
 chmod +x "${PREFIX}/bin/hayanime"
 ```
@@ -32,7 +32,7 @@ ___
 > **Note**: Setupping MPV for Android is Optional
 
 Setup MPV (For Android Users)
-```
+```sh
 curl -sL -o "${PREFIX}/bin/mpv" "https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv"
 chmod +x "${PREFIX}/bin/mpv"
 ```
@@ -43,7 +43,7 @@ chmod +x "${PREFIX}/bin/mpv"
 - Advanced<br>
 - Edit mpv.conf<br>
 - And insert this:
-```
+```sh
 include="/storage/emulated/0/mpv/mpv.tmp"
 ```
 - Click <kbd>Save</kbd>
@@ -56,7 +56,7 @@ include="/storage/emulated/0/mpv/mpv.tmp"
 • Run "Gitbash" as Administrator
 
 Now Download and Install
-```
+```sh
 curl -sL -o "/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
 chmod +x "/bin/hayanime"
 ```
@@ -64,12 +64,12 @@ chmod +x "/bin/hayanime"
 ### Linux | WSL 
 
 Install Dependencies needed
-```
+```sh
 sudo <your-package-manager> aria2 ffmpeg mpv openssl
 ```
 
 Download and Install
-```
+```sh
 curl -sL -o "${PREFIX}/bin/hayanime" https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime
 chmod +x "${PREFIX}/bin/hayanime"
 ```
@@ -87,7 +87,7 @@ Sample Input:
 ```
 
 To make your life easier, and save your option
-```
+```sh
 echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 ```
 
@@ -114,6 +114,7 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
     -H                          : Play Anime from History
     -D                          : Reset History File
     --hist-limit=[n]            : Limit the number of history choices to be showed up in stdout (default: 15)
+    --histup                    : Update the entries (for checking new episode released)
     -u                          : Update to the latest Version                          
     -v                          : Print Version and Exit                                
     -h                          : Print Help
@@ -144,12 +145,15 @@ Vibration/Notification Signal, you can identify it when:
 ## Features
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
+  > **Note**: Picking Ranges of episode is supported only in Downloading
 
 + History Sub-Commands<br>
 `next` — to go to the next page<br>
-`prev` — to go to the previous page<br>
+`prev` | `back` — to go to the previous page<br>
+`update` — update entries<br>
 `[n]n` — pick and proceed to next episode<br>
-`[n]p` — pick and proceed to previous episode
+`[n]p` — pick and proceed to previous episode<br>
+`[n]d` — delete a specific entry from history
 
 + Keybindings on Picker<br>
    - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
@@ -164,4 +168,4 @@ Vibration/Notification Signal, you can identify it when:
 [GPL-3.0 license](https://github.com/TheGlockMisc/hayanime/blob/master/LICENSE)
 
 ## Bugs & Issues
-+ If you found some bugs, feel free to create a New Issue (PRs OPEN)
+- If you found some bugs, feel free to create a New Issue (PRs OPEN)
