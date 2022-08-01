@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.2"
+VERSION="v2.4.3"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -33,6 +33,7 @@ download_mode="false"
 debug_mode="false"
 dry_run="false"
 ffmp_temp=".piece" ffmp_purl=".piecesUrl"
+chmod u+w ~/.hayanihist
 
 # Default player depends on platform
 case "$(uname -a)" in
@@ -54,7 +55,8 @@ save_terminal(){
 	printf "\033[?25h"	# Show Cursor
 	printf "\033[0m"	# Normal State of Colors
 	stty "${saveterm}"	# Rollback stty settings
-	IFS="${defifs}"	# Set to default IFS
+	IFS="${defifs}"		# Set to default IFS
+	chmod u-w ~/.hayanihist	# Remove write permission to history, to prevent accident writing to file causing error
 }
 
 sanitize_terminal(){
@@ -333,25 +335,21 @@ hist_handler(){
 hist_update(){
 	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
 	[ "${hist_count}" = "0" ] && die 1 "Theres no to update, History is Empty"
+	printf "\033[38;5;3m\033[2K\r%b\033[0m" "Checking..."
+	curl -sLfk "${base_url}/v1/spy-x-family" -A "${user_agent}" > /dev/null 2>&1 || die 1 "\033[2K\rServer can't be reach..."
 	cp ~/.hayanihist ~/.hayanihist.tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
 		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
 		(
 			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-			if [ -z "${tot_ep}" ]; then
-				printf "\033[38;5;1m\033[2K\r%b\033[0m" "Failed to Retrieve data."
-				: > .hayanihist.tmp
-				exit 1
-			fi
-			printf '%s' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp)" > ~/.hayanihist.tmp
+			printf '%s\n' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp)" > ~/.hayanihist.tmp
 		) &
 		progbar "${entriter}" "${hist_count}" "Updating..."
 		[ "$(jobs -p | awk 'BEGIN{c=0} //{c++} END{print c}')" -gt 2 ] && wait "${!}"
 		unset cur_ep
 	done < ~/.hayanihist
 	wait "${!}"
-	[ -z "$(cat ~/.hayanihist.tmp)" ] && die 1 "\033[2K\rFailed to Update..."
 	mv ~/.hayanihist.tmp ~/.hayanihist && cleanup_trap
 	unset entriter
 	suc "\033[2K\rHistory file successfully updated!"
@@ -791,16 +789,16 @@ streaming_url_server(){
 		dood)
 			dood_id="$(printf '%s' "${ind_gogoend}" | sed -E '/Doodstream/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/__g')"
 			cust_referer="https://dood.pm/e/${dood_id}"
-			dood_path="$(curl -m 5 -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5.*)\x27,.*_\1_p')"
+			dood_path="$(curl -m 10 -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5[^\x27]*)\x27,.*_\1_p')"
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(awk 'BEGIN {srand(); print srand()}')"
-			main_streaming="$(curl -m 5 -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
+			main_streaming="$(curl -m 10 -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
 			if printf '%s' "${main_streaming}" | grep -vqE 'dood.vid'; then
 				unset main_streaming
 			fi
 			;;
 		mpup)
 			mpupurl="$(printf '%s' "${ind_gogoend}" | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
-			main_streaming="$(curl -m 5 -skLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
+			main_streaming="$(curl -m 10 -skLA "${user_agent}" "${mpupurl}" | sed -nE 's_.*embed\|(.*)\|.*blank.*\|(.*)\|(.*)\|(.*)\|(.*)\|src.*_https://\1.mp4upload.com:\5/d/\4/\3.\2_p')"
 			cust_referer="${main_streaming}"
 			;;
 		# Substitute Servers
