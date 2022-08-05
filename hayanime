@@ -14,14 +14,14 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.3"
+VERSION="v2.4.4"
 
 # Variables (Default Options)
 OWNPID="${$}"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
 base_url_go="https://goload.pro"
-search_base_api="https://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
+search_base_api="http://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 termcols="${COLUMNS:-$(stty size)}" termcols="${termcols##* }"
 currtrunc="${PWD:-$(pwd)}" currtrunc="../${currtrunc##*/}"
@@ -32,8 +32,8 @@ server="default"
 download_mode="false"
 debug_mode="false"
 dry_run="false"
+hist_file=".hayanihist"
 ffmp_temp=".piece" ffmp_purl=".piecesUrl"
-chmod u+w ~/.hayanihist
 
 # Default player depends on platform
 case "$(uname -a)" in
@@ -56,7 +56,6 @@ save_terminal(){
 	printf "\033[0m"	# Normal State of Colors
 	stty "${saveterm}"	# Rollback stty settings
 	IFS="${defifs}"		# Set to default IFS
-	chmod u-w ~/.hayanihist	# Remove write permission to history, to prevent accident writing to file causing error
 }
 
 sanitize_terminal(){
@@ -75,7 +74,7 @@ showCursor(){
 }
 
 cleanup_trap(){
-	for temps in tmpvid.ts ~/.piece ~/.vstats ~/.piecesUrl ~/.hayanihist.tmp; do
+	for temps in tmpvid.ts ~/"${ffmp_temp}" ~/.vstats ~/"${ffmp_purl}" ~/"${hist_file}".tmp; do
 		[ -e "${temps}" ] && rm -rdf "${temps}"
 	done
 }
@@ -232,23 +231,23 @@ ffmpegdler(){
 }
 
 hist_handler(){
-	[ -e ~/.hayanihist ] || touch ~/.hayanihist 2>/dev/null		# Supress Incase of the Directory is Unwritable
+	[ -e ~/"${hist_file}" ] || touch ~/"${hist_file}" 2>/dev/null		# Supress Incase of the Directory is Unwritable
 	if [ "${1}" = "append" ]; then
-		[ -w ~/.hayanihist ] || die 1 "Hist file is Unwritable, Make sure you have access to write to HOME directory"
-		printf '%s' "$(sed "/${3}/d" ~/.hayanihist)" > ~/.hayanihist
-		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/.hayanihist
+		[ -w ~/"${hist_file}" ] || die 1 "Hist file is Unwritable, Make sure you have access to write to HOME directory"
+		printf '%s\n' "$(sed "/${3}/d" ~/"${hist_file}")" > ~/"${hist_file}"
+		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/"${hist_file}"
 	else
 		hist_limt="${hist_limt:-15}"
 		while true; do
-			hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
+			hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/"${hist_file}")"
 			main_interface
 			case "${hist_picked}" in
 				cont|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate)
 					[ "${hist_picked}" = "cont" ] && [ "${hist_count_persi}" = "1" ] && : "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
-					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
+					hist_data="$(sed -E '1!G;h;$!d' ~/"${hist_file}" | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
 					;;
 				*)
-					hist_data="$(sed -E '1!G;h;$!d' ~/.hayanihist | head -n "${hist_limt}")"
+					hist_data="$(sed -E '1!G;h;$!d' ~/"${hist_file}" | head -n "${hist_limt}")"
 					;;
 			esac
 			hist_count="${hist_count_or}"
@@ -286,10 +285,9 @@ hist_handler(){
 				solv="-1" hist_picked="${hist_picked_d}"
 			elif printf '%s' "${hist_picked}" | grep -qE '^[1-9][0-9]*[Dd]$'; then
 				calc_indhist="$(( 1 + hist_count_or - (hist_limt * ${cur_page_hist:-1} - hist_limt + hist_picked_d) ))"
-				printf '%s' "$(sed "${calc_indhist}"d ~/.hayanihist)" > ~/.hayanihist
-				suc "The ${hist_picked_d}th entry on Page ${cur_page_hist:-1} was successfully deleted"
-				sleep 0.5
-				hist_picked="cont"
+				printf '%s\n' "$(sed "${calc_indhist}"d ~/"${hist_file}")" > ~/"${hist_file}"
+				suc "The #${hist_picked_d} entry on Page ${cur_page_hist:-1} was successfully deleted"
+				sleep 0.5 && hist_picked="cont"
 				continue
 			fi
 			case "${hist_picked}" in
@@ -333,30 +331,31 @@ hist_handler(){
 }
 
 hist_update(){
-	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/.hayanihist)"
+	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/"${hist_file}")"
 	[ "${hist_count}" = "0" ] && die 1 "Theres no to update, History is Empty"
 	printf "\033[38;5;3m\033[2K\r%b\033[0m" "Checking..."
 	curl -sLfk "${base_url}/v1/spy-x-family" -A "${user_agent}" > /dev/null 2>&1 || die 1 "\033[2K\rServer can't be reach..."
-	cp ~/.hayanihist ~/.hayanihist.tmp
+	cp ~/"${hist_file}" ~/"${hist_file}".tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
 		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
 		(
 			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-			printf '%s\n' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/.hayanihist.tmp)" > ~/.hayanihist.tmp
+			printf '%s\n' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/"${hist_file}".tmp)" > ~/"${hist_file}".tmp
 		) &
-		progbar "${entriter}" "${hist_count}" "Updating..."
 		[ "$(jobs -p | awk 'BEGIN{c=0} //{c++} END{print c}')" -gt 2 ] && wait "${!}"
+		progbar "${entriter}" "${hist_count}" "Updating..."
 		unset cur_ep
-	done < ~/.hayanihist
-	wait "${!}"
-	mv ~/.hayanihist.tmp ~/.hayanihist && cleanup_trap
+	done < ~/"${hist_file}"
+	sleep 2
+	mv ~/"${hist_file}".tmp ~/"${hist_file}" && cleanup_trap
 	unset entriter
 	suc "\033[2K\rHistory file successfully updated!"
 }
 
 idx_comp(){
-	stream_ind="$(curl -sLfk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')" || qualvid="auto" && return 1
+	stream_ind="$(curl -sLfk "${1}" -A "${user_agent}" | grep '#EXT-X-STREAM-INF')" || qualvid="auto"
+	[ "${qualvid}" = "auto" ] && return 1
 	for qual_var in ${qualvidman} 1080 720 480 360 240; do
 		qualvid="$(printf '%s' "${stream_ind}" | grep -Fn "${qual_var}")" qualvid="${qualvid%%:*}"
 		[ -n "${qualvid}" ] && break
@@ -573,7 +572,7 @@ choose_from_menu(){
 				EOF
 				read -r ar && printf '%s' "${ar}" >/dev/null && unset ar
 				# Sanitize Terminal
-				sanitize_terminal "9" "10"
+				sanitize_terminal 9 10
 				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
 				;;
 			"${pgup}")
@@ -650,9 +649,9 @@ search(){
 
 result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
-	query_result="$(curl -sLk "${search_base_api}" -d "q2=${1}" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
+	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&d=gogoanime.gg" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
-	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[d|D]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[d|D]ub')"
+	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[Dd]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
 	table_ui "${query_scraped}"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
@@ -678,7 +677,7 @@ selector(){
 }
 
 epi_counter(){
-	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div id="epslistplace" style="display:none">/,/<\/div>/!d;s_"ep0"_"-1"_g')"
+	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div.*epslistplace.*[^\>]*>/,/<\/div>/!d;s_"ep0"_"-1"_g')"
 	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
 	if [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; then
 		die 1 "Anime is Not released yet, Or your IP is Blocked"
@@ -708,14 +707,14 @@ episode_selector(){
 		epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	done
 	[ "${download_mode}" = "true" ] || epi_selected="${epi_selected##*-}"
-	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E 's_https://animixplay.to/v1/__g;s_-_ _g;s_\b(.)_\u\1_g')"
-	file_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s_https://animixplay.to/v1/__g;s_\$_-episode-${epi_selected}_g").mp4"
+	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s_-_ _g;s_\b(.)_\u\1_g")"
+	file_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s@\$@-episode-${epi_selected}@g").mp4"
 	title_crafted="$(printf '%s %s' "${anime_name_crafted}" "Episode ${epi_selected}" )"
 }
 
 qualitypicker(){
 	if [ -z "${qual_stream}" ]; then
-		if printf '%s' "${server}" | grep -qE 'dood|mpup' || [ "${player}" = "built-in" ]; then
+		if printf '%s' "${server}" | grep -qE 'dood|mpup' || [ "${player}" = "built-in" ] || { [ "${player}" = "vlc" ] && [ "${server}" = "default" ]; }; then
 			qual_stream="high"
 		fi
 		[ "${download_mode}" = "true" ] && unset qual_stream
@@ -764,7 +763,7 @@ streaming_url_server(){
 	fi
 	case "${server:=default}" in
 		gogo)
-			cust_referer="gogoanime.fi"
+			cust_referer="gogoanime.la"
 			main_streaming="$(curl -m 5 -sLk "${base_url_ani}/player/v1.php?id=${1}" | sed -nE '/file:/ {s_.*file:."([^"]*)".*_\1_p;q}')"
 			;;
 		sb)
@@ -1081,11 +1080,11 @@ arg_parser(){
 				update_script
 				;;
 			H)
-				hist_handler
+				hist_handler && hist_open="true"
 				;;
 			D)
-				[ -e ~/.hayanihist ] || die 1 "Can't clear the file, File does not exist."
-				: > ~/.hayanihist
+				[ -e ~/"${hist_file}" ] || die 1 "Can't clear the file, File does not exist."
+				: > ~/"${hist_file}"
 				exit 0
 				;;
 			t)
@@ -1099,8 +1098,13 @@ arg_parser(){
 					dub)	dub_mode="true"	;;
 					help)	show_help && exit 0	;;
 					debug)	debug_mode="true"	;;
-					*hist-limit*)	hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"	hist_limt="${hist_limt##0}"	;;
-					histup) hist_update && die 0	;;
+					*hist-limit*)
+						hist_limt="$(printf '%s' "${OPTARG}" | tr -dc '0-9')"
+						if ! printf '%s' "${hist_limt}" | grep -qE '^[1-9][0-9]*$'; then
+							die 1 "Format Error, it must be digits and must not have trailing zeros."
+						fi
+						;;
+					histup)	hist_update && die 0	;;
 					*)
 						err "[--${OPTARG}]: Illegal Option"
 						show_help
@@ -1139,6 +1143,7 @@ arg_parser(){
 		esac
 	done
 	shift "$((OPTIND - 1))"
+	[ "${hist_open}" = "true" ] && return 0	# Avoid overwriting history selected anime when searching through args 
 	[ -z "${ani_searched}" ] && ani_searched="${*}"
 }
 
