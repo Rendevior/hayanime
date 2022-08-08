@@ -25,9 +25,8 @@ search_base_api="http://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 termcols="${COLUMNS:-$(stty size)}" termcols="${termcols##* }"
 currtrunc="${PWD:-$(pwd)}" currtrunc="../${currtrunc##*/}"
-userguest="$(id -un)"
-saveterm="$(stty -g)"
 defifs="${IFS}"
+userguest="$(id -un)" saveterm="$(stty -g)"
 server="default"
 download_mode="false"
 debug_mode="false"
@@ -67,10 +66,6 @@ sanitize_terminal(){
 
 hideCursor(){
 	printf "\033[?25l"
-}
-
-showCursor(){
-	save_terminal
 }
 
 cleanup_trap(){
@@ -439,50 +434,46 @@ main_interface(){
 }
 
 show_help(){
-	while IFS= read -r line; do
-		printf "%b\n" "${line}"
-	done <<-EOF
-	Easy and Lightweight Program that lets you watch anime without interruptions.
-	
-	 Usage:
-	    ${0##*/} [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
-	    ${0##*/} [--hist-limit="n"] [-H] [-s <server>]
-	    ${0##*/} -v | -h | -D | -u
-		
-	 Options:
-	    -q [low|normal|high]\t: Choose specific quality
-	    -s [default|(1-5)]\t\t: Select server
-	    -p [vlc|built-in]\t\t: Use specific video player (default based on OS)
-	    --dub\t\t\t: Watch Dubbed Anime
-	    -d\t\t\t\t: Download Mode
-	    -H\t\t\t\t: Play Anime from History
-	    -D\t\t\t\t: Reset History File
-	    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 15)
-	    --histup\t\t\t: Update the entries (for checking new episode released)
-	    -u\t\t\t\t: Update to the latest Version
-	    -v\t\t\t\t: Print Version and Exit
-	    -h\t\t\t\t: Print Help
-	
-	 Debugging Tools:
-	    -t\t\t\t\t: Dry Run (for testing servers availability)
-	    --debug\t\t\t: Show Debug (for testing purposes)
-	
-	The quality selection on "-p built-in" and in some servers are not available. (default: Auto)
-	Server Selection is optional, Server 1 is fast but most of the time 
-	it always break. Incase of the default ones is not working, please choose
-	the backup. Built-in video player is only for termux (Android) users.
-	
-	Vibration/Notification Signal, you can identify it when:
-	    | 1 Vibration/s | : Something succeeds without errors
-	    | 2 Vibration/s | : An error or something was failed
-	
-	Exit Codes:
-	    [0] : No Error
-	    [1] : An Error occured or the process was destructed by an Exception
-	    [2] : Exited using "Iterrupt"
-	
-	More info: <https://github.com/TheGlockMisc/hayanime/>.
-	EOF
+	printf "%b\n" "Easy and Lightweight Program that lets you watch anime without interruptions.
+
+ Usage:
+    ${0##*/} [-s <server>] [-q <quality>] [-p <player>] [--dub] [anime]
+    ${0##*/} [--hist-limit=\"n\"] [-H] [-s <server>]
+    ${0##*/} -v | -h | -D | -u
+
+ Options:
+    -q [low|normal|high]\t: Choose specific quality
+    -s [default|(1-5)]\t\t: Select server
+    -p [vlc|built-in]\t\t: Use specific video player (default based on OS)
+    --dub\t\t\t: Watch Dubbed Anime
+    -d\t\t\t\t: Download Mode
+    -H\t\t\t\t: Play Anime from History
+    -D\t\t\t\t: Reset History File
+    --hist-limit=[n]\t\t: Limit the number of history choices to be showed up in stdout (default: 15)
+    --histup\t\t\t: Update the entries (for checking new episode released)
+    -u\t\t\t\t: Update to the latest Version
+    -v\t\t\t\t: Print Version and Exit
+    -h\t\t\t\t: Print Help
+
+ Debugging Tools:
+    -t\t\t\t\t: Dry Run (for testing servers availability)
+    --debug\t\t\t: Show Debug (for testing purposes)
+
+The quality selection on \"-p built-in\" and in some servers are not available.
+Server Selection is optional, Server 1 is fast but most of the time it
+always break. Incase of the default ones is not working, please choose
+the backup. Built-in video player is only for termux (Android) users.
+
+Vibration/Notification Signal, you can identify it when:
+    | 1 Vibration/s | : Something succeeds without errors
+    | 2 Vibration/s | : An error or something was failed
+
+Exit Codes:
+    [0] : No Error
+    [1] : An Error occured or the process was destructed by an Exception
+    [2] : Exited using \"Iterrupt\" signal
+
+More info: <https://github.com/TheGlockMisc/hayanime/>."
 }
 
 table_ui(){
@@ -583,7 +574,7 @@ choose_from_menu(){
 				;;
 			"")
 				menu_result_menu="${cur}"
-				showCursor
+				save_terminal
 				break
 				;;
 		esac
@@ -651,11 +642,11 @@ result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
 	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&d=gogoanime.gg" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
-	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep '[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -v '[Dd]ub')"
+	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep -E '(-|\()[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -Ev '(-|\()[Dd]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
-	table_ui "${query_scraped}"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
 	[ "${query_count}" = "0" ] && die 1 "No Results was Found"
+	table_ui "${query_scraped}"
 	[ "${debug_mode}" = "true" ] && debug_handler took-dur "${took_dur}" && debug_handler total-quer "${query_count}"
 }
 
@@ -673,7 +664,7 @@ selector(){
 		ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	done
 	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
-	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s_(.*)#.*_${base_url}\1_")"
+	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s@(.*)#.*@${base_url}\1@")"
 }
 
 epi_counter(){
@@ -706,7 +697,9 @@ episode_selector(){
 		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 		epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	done
-	[ "${download_mode}" = "true" ] || epi_selected="${epi_selected##*-}"
+	[ -z "${end_ep}" ] && end_ep="${epi_selected##*-}"
+	epi_selected="${epi_selected%%-*}"
+	[ "${epi_selected}" -gt "${end_ep:-${epi_selected}}" ] && die 1 "Invalid Range"
 	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s_-_ _g;s_\b(.)_\u\1_g")"
 	file_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s@\$@-episode-${epi_selected}@g").mp4"
 	title_crafted="$(printf '%s %s' "${anime_name_crafted}" "Episode ${epi_selected}" )"
@@ -791,9 +784,7 @@ streaming_url_server(){
 			dood_path="$(curl -m 10 -kA "${user_agent}" -s "${cust_referer}" | sed -nE 's_.*get\(\x27(/pass\_md5[^\x27]*)\x27,.*_\1_p')"
 			dood_param="${dood_path##*"/pass_md5/"}" dood_ex="$(awk 'BEGIN {srand(); print srand()}')"
 			main_streaming="$(curl -m 10 -kA "${user_agent}" -s "https://dood.pm${dood_path}" -e "${cust_referer}")doodstream?token=${dood_param##*/}&expiry=${dood_ex}000"
-			if printf '%s' "${main_streaming}" | grep -vqE 'dood.vid'; then
-				unset main_streaming
-			fi
+			printf '%s' "${main_streaming}" | grep -vqE 'dood.vid' && unset main_streaming
 			;;
 		mpup)
 			mpupurl="$(printf '%s' "${ind_gogoend}" | sed -E '/Mp4upload/!d;s_.*data-video="(.*?)".*_\1_')"
@@ -881,7 +872,7 @@ loop(){
 		main
 		launch_vid
 		main_interface
-		hist_handler "append" "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
+		hist_handler append "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
 		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-20))}/ s_(.{$((termcols-29))}).*(.{7}\$)_\\1...\\2_g")"
 		formatter_title="$(printf '%b' "Now Playing: \033[4m\033[48;5;240m${trunc_aniname}\033[0m [${epi_selected}/${epi_total}]")"
 		printf "%*s\n\n" "$(((${#formatter_title}+termcols+18)/2))" "${formatter_title}"
@@ -891,6 +882,13 @@ loop(){
 			debug_handler ani-id "${idserv}"
 			debug_handler ani-url "${anime_selected}"
 			debug_handler vid-url "${main_streaming}"
+		fi
+		[ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
+		if [ "${epi_selected}" -lt "${end_ep:-${epi_selected}}" ]; then
+			: "$((epi_selected += 1))"
+			continue
+		else
+			unset end_ep
 		fi
 		inf "Press H to show keybindings..."
 		choose_from_menu "Pick based on your suit needs:" "Exit This Program
@@ -924,7 +922,7 @@ loop(){
 				unset main_streaming encodeb64 idserv
 				;;
 			4)
-				unset epi_selected main_streaming encodeb64 idserv
+				unset epi_selected main_streaming encodeb64 idserv end_ep
 				main_interface
 				continue
 				;;
@@ -981,18 +979,15 @@ range_dl_handler(){
 	selector
 	episode_selector
 	qualitypicker
-	start_ep="${epi_selected%%-*}"
-	end_ep="${epi_selected##*-}"
-	[ "${end_ep:-${start_ep}}" -gt "${epi_total}" ] && die 1 "Out of Range"
-	while [ "${start_ep}" -le "${end_ep:-${start_ep}}" ]; do
-		epi_selected="${start_ep}"
+	[ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
+	while [ "${epi_selected}" -le "${end_ep:-${epi_selected}}" ]; do
 		episode_selector
 		qualitypicker
 		id_grepper
 		quality_selector
 		streaming_url_server "${idserv}"
 		dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"
-		: "$((start_ep += 1))"
+		: "$((epi_selected += 1))"
 	done
 	die 0
 }
