@@ -93,11 +93,11 @@ echo 'alias hayanime="hayanime <your options>"' >> ~/.bashrc
 
 ## Prerequisites 
 + Essentials
-  + Grep
-  + Curl
-  + Aria2c & FFmpeg (Downloading) / openssl (Decoding)
-  + Sed
-  + Awk
+  + grep
+  + curl
+  + aria2c & FFmpeg (Downloading) / openssl (Decoding)
+  + sed
+  + awk
 + Players
   + MPV **(Linux/Android Users)**
   + VLC **(Windows Users)**
@@ -145,7 +145,6 @@ Vibration/Notification Signal, you can identify it when:
 ## Features
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
-  > **Note**: Picking Ranges of episode is supported only in Downloading
 
 + History Sub-Commands<br>
 `next` — to go to the next page<br>
