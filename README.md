@@ -6,7 +6,7 @@ Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
 
 [![Main](https://img.shields.io/badge/Maintainer-TheGlockMisc-green?style=flat-square)](https://github.com/TheGlockMisc)
-[![Main](https://img.shields.io/badge/Maintainer-Zudeath-green?style=flat-square)](https://github.com/Zudeath)
+[![Main](https://img.shields.io/badge/Maintainer-fearocanity-green?style=flat-square)](https://github.com/fearocanity)
 ![Main](https://img.shields.io/badge/OS-Linux-blue?style=flat-square)
 ![Main](https://img.shields.io/badge/OS-Windows-blue?style=flat-square)
 ![Main](https://img.shields.io/badge/OS-Android-blue?style=flat-square)
