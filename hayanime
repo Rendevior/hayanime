@@ -318,9 +318,9 @@ hist_handler(){
 		# Assign the Infos by declaring
 		hist_data="$(printf '%s' "${hist_data}" | sed -E "${hist_picked}"'!d')"
 		query_result="${hist_data%%¢*}#"
-		ani_searched="$(printf '%s' "${hist_data}" | sed -E 's_.*¢(.*)€.*_\1_g')"
+		ani_searched="${hist_data##${hist_data%%¢*}¢}" ani_searched="${ani_searched%%€*}"
 		ani_selected="1" qual_stream="high" query_count="1"
-		epi_selected="$(($(printf '%s' "${hist_data}" | sed -E 's_.*€(.*)£.*_\1_g;s_/.*__g') + ${solv:-0} ))"
+		epi_selected="${hist_data#*€}" epi_selected="${epi_selected%%£*}" epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
 		player="${hist_data##*£}"
 	fi
 }
@@ -333,7 +333,7 @@ hist_update(){
 	cp ~/"${hist_file}" ~/"${hist_file}".tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
-		cur_ep="$(printf '%s' "${entry}" | sed -E 's_.*€(.*)£.*_\1_g')" cur_ep="${cur_ep%%/*}"
+		cur_ep="${entry#*€}" cur_ep="${cur_ep%%£*}" cur_ep="${cur_ep%%/*}"
 		(
 			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
 			printf '%s\n' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/"${hist_file}".tmp)" > ~/"${hist_file}".tmp
@@ -477,7 +477,6 @@ More info: <https://github.com/TheGlockMisc/hayanime/>."
 }
 
 table_ui(){
-	data="$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')"
 	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
 		: "$((coldep += 1))"
@@ -485,15 +484,14 @@ table_ui(){
 		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
 		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
-	${data}
+	$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
-	unset data line len coldep
+	unset line len coldep
 }
 
 table_ui_hist(){
 	printf '\n%*s\n' "$((termcols - 5))" "Page ${cur_page_hist:=1} of ${pages_total:-1}"
-	data="$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')"
 	printf "\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
 	while IFS= read -r line; do
 		: "$((coldep += 1))"
@@ -501,10 +499,10 @@ table_ui_hist(){
 		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
 		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
-	${data}
+	$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
-	unset data line len coldep
+	unset line len coldep
 }
 
 choose_from_menu(){
@@ -561,7 +559,7 @@ choose_from_menu(){
 				
 				Press ENTER to Continue...
 				EOF
-				read -r ar && printf '%s' "${ar}" >/dev/null && unset ar
+				read -r
 				# Sanitize Terminal
 				sanitize_terminal 9 10
 				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
