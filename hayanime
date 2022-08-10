@@ -318,7 +318,7 @@ hist_handler(){
 		# Assign the Infos by declaring
 		hist_data="$(printf '%s' "${hist_data}" | sed -E "${hist_picked}"'!d')"
 		query_result="${hist_data%%¢*}#"
-		ani_searched="${hist_data##${hist_data%%¢*}¢}" ani_searched="${ani_searched%%€*}"
+		ani_searched="${hist_data##"${hist_data%%¢*}"¢}" ani_searched="${ani_searched%%€*}"
 		ani_selected="1" qual_stream="high" query_count="1"
 		epi_selected="${hist_data#*€}" epi_selected="${epi_selected%%£*}" epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
 		player="${hist_data##*£}"
