@@ -14,7 +14,7 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.4"
+VERSION="v2.4.5"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -78,6 +78,7 @@ cleanup_trap(){
 # Color Processors
 err(){
 	[ -n "${1}" ] && printf "\033[38;5;1m%b\007\007\033[0m\n" "${1}" >&2
+	return 1
 }
 
 die(){
@@ -226,15 +227,15 @@ ffmpegdler(){
 }
 
 hist_handler(){
-	[ -e ~/"${hist_file}" ] || touch ~/"${hist_file}" 2>/dev/null		# Supress Incase of the Directory is Unwritable
+	[ -e ~/"${hist_file}" ] || { : > ~/"${hist_file}";} >/dev/null 2>&1
 	if [ "${1}" = "append" ]; then
-		[ -w ~/"${hist_file}" ] || die 1 "Hist file is Unwritable, Make sure you have access to write to HOME directory"
+		[ -w ~/"${hist_file}" ] || err "Hist file is Unwritable, Make sure you have access to write to HOME directory/file" || return 1
 		printf '%s\n' "$(sed "/${3}/d" ~/"${hist_file}")" > ~/"${hist_file}"
 		printf '%s¢%s€%s£%s\n' "${2##*"${base_url}"}" "${3}" "${4}" "${5}" >> ~/"${hist_file}"
 	else
 		hist_limt="${hist_limt:-15}"
 		while true; do
-			hist_count_or="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/"${hist_file}")"
+			hist_count_or="$(grep -c '[^[:space:]]' ~/"${hist_file}")"
 			main_interface
 			case "${hist_picked}" in
 				cont|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate)
@@ -246,7 +247,7 @@ hist_handler(){
 					;;
 			esac
 			hist_count="${hist_count_or}"
-			hist_count_persi="$(printf '%s' "${hist_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
+			hist_count_persi="$(printf '%s' "${hist_data}" | grep -c '[^[:space:]]')"
 			unset pages_total
 			until [ -z "${hist_count%%-*}" ] || [ "${hist_count}" = "0" ]; do
 				: "$((hist_count -= hist_limt))" "$((pages_total += 1))"
@@ -286,7 +287,7 @@ hist_handler(){
 				continue
 			fi
 			case "${hist_picked}" in
-				[Nn]ext)
+				[Nn]ext|[Nn])
 					if [ "${cur_page_hist}" -ge "${pages_total}" ]; then 
 						err "Theres no next page"
 						sleep 0.5
@@ -294,7 +295,7 @@ hist_handler(){
 						: "$((page_comp += hist_limt))" "$((cur_page_hist += 1))"
 					fi
 					;;
-				[Pp]rev|[Bb]ack)
+				[Pp]rev|[Pp]|[Bb]ack|[Bb])
 					if [ "${cur_page_hist}" -le "1" ]; then
 						err "Theres no previous page"
 						sleep 0.5
@@ -302,7 +303,7 @@ hist_handler(){
 						: "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					fi
 					;;
-				[Uu]pdate)
+				[Uu]pdate|[Uu][Pp])
 					hist_update
 					sleep 1
 					;;
@@ -320,29 +321,30 @@ hist_handler(){
 		query_result="${hist_data%%¢*}#"
 		ani_searched="${hist_data##"${hist_data%%¢*}"¢}" ani_searched="${ani_searched%%€*}"
 		ani_selected="1" qual_stream="high" query_count="1"
-		epi_selected="${hist_data#*€}" epi_selected="${epi_selected%%£*}" epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
+		epi_selected="${hist_data#*€}" epi_selected="${epi_selected%%£*}"
+		printf '%s' "${epi_selected%%/*}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%/*}" || epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
 		player="${hist_data##*£}"
 	fi
 }
 
 hist_update(){
-	hist_count="$(awk 'BEGIN{c=0} //{c++} END{print c}' ~/"${hist_file}")"
+	[ -e ~/"${hist_file}".tmp ] && rm -f ~/"${hist_file}".tmp
+	hist_count="$(grep -c '[^[:space:]]' ~/"${hist_file}")"
 	[ "${hist_count}" = "0" ] && die 1 "Theres no to update, History is Empty"
 	printf "\033[38;5;3m\033[2K\r%b\033[0m" "Checking..."
 	curl -sLfk "${base_url}/v1/spy-x-family" -A "${user_agent}" > /dev/null 2>&1 || die 1 "\033[2K\rServer can't be reach..."
-	cp ~/"${hist_file}" ~/"${hist_file}".tmp
 	while read -r entry; do
 		: "$((entriter += 1))"
 		cur_ep="${entry#*€}" cur_ep="${cur_ep%%£*}" cur_ep="${cur_ep%%/*}"
-		(
-			tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-			printf '%s\n' "$(sed "${entriter}s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" ~/"${hist_file}".tmp)" > ~/"${hist_file}".tmp
-		) &
-		[ "$(jobs -p | awk 'BEGIN{c=0} //{c++} END{print c}')" -gt 2 ] && wait "${!}"
+		tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
+		printf '%s\n' "${entry}" | sed "s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" >> ~/"${hist_file}".tmp
 		progbar "${entriter}" "${hist_count}" "Updating..."
 		unset cur_ep
 	done < ~/"${hist_file}"
-	sleep 2
+	if grep -qE '\€([0-9]*)/\£' ~/"${hist_file}".tmp || grep -qv '[^[:space:]]' ~/"${hist_file}".tmp; then
+		cleanup_trap
+		die 1 "\033[2K\rFailed to update for some reason..."
+	fi
 	mv ~/"${hist_file}".tmp ~/"${hist_file}" && cleanup_trap
 	unset entriter
 	suc "\033[2K\rHistory file successfully updated!"
@@ -473,6 +475,14 @@ Exit Codes:
     [1] : An Error occured or the process was destructed by an Exception
     [2] : Exited using \"Iterrupt\" signal
 
+Servers:
+    [any] : Default server (superfast server | m3u8)
+    [1] : Gogoanime Server (fast server | m3u8)
+    [2] : SBPlay Server (mid fast-ish server 2-4mbps | m3u8)
+    [3] : FEmbed Server (fast server | mp4)
+    [4] : Dood Server (mid speed server | mp4)
+    [5] : MP4up server (mid fast-ish server | mp4)
+
 More info: <https://github.com/TheGlockMisc/hayanime/>."
 }
 
@@ -510,7 +520,7 @@ choose_from_menu(){
 	shift 1
 	options="${*}" cur="0" index="0"
 	count="$(printf '%s' "${options}" | awk 'END{print NR}')" 
-	up="$(printf '%b' "\033[A")" down="$(printf '%b' "\033[B")" escchar="$(printf '%b' "\033")" pgup="$(printf '%b' "\033[5~")" pgdn="$(printf '%b' "\033[6~")"
+	up="$(printf "\033[A")" down="$(printf "\033[B")" escchar="$(printf "\033")" pgup="$(printf "\033[5~")" pgdn="$(printf "\033[6~")"
 	hideCursor
 	stty -echo -icanon min 1 time 0
 	printf '%b\n' "${prompt}"
@@ -559,7 +569,7 @@ choose_from_menu(){
 				
 				Press ENTER to Continue...
 				EOF
-				read -r
+				read -r at && : "${at}" && unset at
 				# Sanitize Terminal
 				sanitize_terminal 9 10
 				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
@@ -689,15 +699,16 @@ episode_selector(){
 	epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 	epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	while [ "${epi_whole:-$((epi_total + 2))}" -gt "${epi_total}" ]; do
-		err "Episode does not exist."
+		err "Episode does not exist, or Out of Range"
 		input_questions "Episode [1-${epi_total}]: "
 		read -r epi_selected
 		epi_selected="$(printf '%s' "${epi_selected}" | tr -dc '0-9\.\-')"
 		epi_whole="$(printf '%s' "${epi_selected}" | sed -E 's_(\.[0-9]*|^[0-9]*\-)__g')"
 	done
-	[ -z "${end_ep}" ] && end_ep="${epi_selected##*-}"
+	[ -z "${end_ep}" ] && end_ep="${epi_selected##*-}" end_ep="${end_ep%%.[0-9]*}"
 	epi_selected="${epi_selected%%-*}"
-	[ "${epi_selected}" -gt "${end_ep:-${epi_selected}}" ] && die 1 "Invalid Range"
+	printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*' && is_half="true"
+	[ "${is_half}" != "true" ] && [ "${epi_selected}" -gt "${end_ep:-${epi_selected}}" ] && die 1 "Invalid Range"
 	anime_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s_-_ _g;s_\b(.)_\u\1_g")"
 	file_name_crafted="$(printf '%s' "${anime_selected}" | sed -E "s@${base_url}/v1/@@g;s@\$@-episode-${epi_selected}@g").mp4"
 	title_crafted="$(printf '%s %s' "${anime_name_crafted}" "Episode ${epi_selected}" )"
@@ -717,9 +728,9 @@ qualitypicker(){
 # Scraper & Streams
 id_grepper(){
 	if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]'; then
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g;s_\{"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^(${epi_selected})\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	else
-		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
+		idserv="$(printf '%s' "${epilist_index}" | sed -E 's_,"_\n_g;s_\{"_\n_g' | sed -E -e '/^([0-9]*|[0-9]*\.[0-9]*|\-[0-9]*)\x22/!d' -e "/^($((epi_selected - 1)))\x22/"'!d' -e 's_.*:"(.*?)".*_\1_' -e 's_\#\#_\n_g' | grep -oE '(ed/video/|com/video/|id=|/videoembed/|player.html#)([^\&\?\#]*)' | sort -V | head -n 1)"
 	fi
 	[ -z "${idserv}" ] && die 1 "No ID Returned, Episode does not Exist."
 	case "${idserv}" in
@@ -881,8 +892,8 @@ loop(){
 			debug_handler ani-url "${anime_selected}"
 			debug_handler vid-url "${main_streaming}"
 		fi
-		[ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
-		if [ "${epi_selected}" -lt "${end_ep:-${epi_selected}}" ]; then
+		[ "${is_half}" != "true" ] && [ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
+		if [ "${epi_selected%%.[0-9]*}" -lt "${end_ep:-${epi_selected%%.[0-9]*}}" ]; then
 			: "$((epi_selected += 1))"
 			continue
 		else
@@ -977,8 +988,8 @@ range_dl_handler(){
 	selector
 	episode_selector
 	qualitypicker
-	[ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
-	while [ "${epi_selected}" -le "${end_ep:-${epi_selected}}" ]; do
+	[ "${is_half}" != "true" ] && [ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
+	while [ "${epi_selected%%.[0-9]*}" -le "${end_ep:-${epi_selected%%.[0-9]*}}" ]; do
 		episode_selector
 		qualitypicker
 		id_grepper
@@ -995,7 +1006,7 @@ dryrun_handler(){
 	qual_stream="high"
 	main
 	main_interface
-	[ "${debug_mode}" = "true" ] && debug_handler ani-url "${anime_selected}"
+	[ "${debug_mode}" = "true" ] && debug_handler ani-url "${anime_selected}" && debug_handler ani-id "${idserv}"
 	inf "\nM3u8 Servers"
 	if [ -z "${idena}" ]; then
 		streaming_url_server "${idserv}"
