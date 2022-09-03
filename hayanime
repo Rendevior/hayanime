@@ -322,7 +322,11 @@ hist_handler(){
 		ani_searched="${hist_data##"${hist_data%%¢*}"¢}" ani_searched="${ani_searched%%€*}"
 		ani_selected="1" qual_stream="high" query_count="1"
 		epi_selected="${hist_data#*€}" epi_selected="${epi_selected%%£*}"
-		printf '%s' "${epi_selected%%/*}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%/*}" || epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
+		if printf '%s' "${epi_selected%%/*}" | grep -q '[0-9]*\.[0-9]*'; then
+			[ -n "${solv}" ] && epi_selected="${epi_selected%%/*}" && epi_selected="$(( ${epi_selected%%.[0-9]*} + ${solv:-0} ))" || epi_selected="${epi_selected%%/*}"
+		else
+			epi_selected="$(( ${epi_selected%%/*} + ${solv:-0} ))"
+		fi
 		player="${hist_data##*£}"
 	fi
 }
@@ -599,7 +603,6 @@ ffmpeg_prog(){
 		err "An Error Occured"
 		return 1
 	fi
-	# Time
 	hrs="${vid_dur%%:*}"
 	mins="$(printf '%s' "${vid_dur}" | cut -d':' -f2)"
 	secs="${vid_dur##*:}" secs="${secs%%.*}" secs="${secs##0}"
