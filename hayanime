@@ -339,11 +339,12 @@ hist_update(){
 	curl -sLfk "${base_url}/v1/spy-x-family" -A "${user_agent}" > /dev/null 2>&1 || die 1 "\033[2K\rServer can't be reach..."
 	while read -r entry; do
 		: "$((entriter += 1))"
-		cur_ep="${entry#*€}" cur_ep="${cur_ep%%£*}" cur_ep="${cur_ep%%/*}"
+		cur_ep="${entry#*€}" cur_ep="${cur_ep%%£*}" last_tot_ep="${cur_ep##*/}" cur_ep="${cur_ep%%/*}"
 		tot_ep="$(curl -sLk "${base_url}${entry%%¢*}" -A "${user_agent}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
 		printf '%s\n' "${entry}" | sed "s%\(.*€\)\(.*\)\(£.*\)%\\1${cur_ep}/${tot_ep}\\3%" >> ~/"${hist_file}".tmp
+		[ "${debug_mode}" = "true" ] && [ -n "${tot_ep}" ] && [ "${last_tot_ep}" -lt "${tot_ep}" ] && ani_updated="${entry##"${entry%%¢*}"¢}" ani_updated="${ani_updated%%€*}" && debug_handler ani-updated "${ani_updated}" "$(( tot_ep - last_tot_ep ))" "${tot_ep}"
 		progbar "${entriter}" "${hist_count}" "Updating..."
-		unset cur_ep
+		unset cur_ep tot_ep last_tot_ep
 	done < ~/"${hist_file}"
 	if grep -qE '\€([0-9]*)/\£' ~/"${hist_file}".tmp || grep -qv '[^[:space:]]' ~/"${hist_file}".tmp; then
 		cleanup_trap
@@ -406,6 +407,10 @@ debug_handler(){
 			;;
 		vid-url)
 			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n\n' "Direct Stream URL: ${2}"
+			;;
+		# History
+		ani-updated)
+			printf '\033[2K\r\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mhist\033[38;5;226m] \033[0m%b\n' "\"${2}\" has ${3} new episode, Latest EP is: ${4}"
 			;;
 	esac
 }
