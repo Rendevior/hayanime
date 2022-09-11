@@ -14,13 +14,13 @@
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.5"
+VERSION="v2.4.6"
 
 # Variables (Default Options)
 OWNPID="${$}"
 base_url="https://animixplay.to"
 base_url_ani="https://6ani.me"
-base_url_go="https://goload.pro"
+base_url_go="https://gogohd.net"
 search_base_api="http://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev/"
 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 termcols="${COLUMNS:-$(stty size)}" termcols="${termcols##* }"
@@ -191,8 +191,7 @@ ffmpegdler(){
 	if [ -n "${enc_key}" ]; then
 		dec_key="$(curl -sLk "${enc_key}" | od -A n -t x1 | tr -d ' |\n')"
 		enc_iv="$(printf "%s" "${ts_data_sec}" | sed -nE 's_^#EXT-X-IV.*URI="([^"]*)"_\1_p')"
-		[ -z "${enc_iv}" ] && dec_iv="$(openssl rand -hex 16)" || \
-			dec_iv="$(curl -sLk "${enc_iv}" | od -A n -t x1 | tr -d ' |\n')"
+		[ -z "${enc_iv}" ] && dec_iv="$(openssl rand -hex 16)" || dec_iv="$(curl -sLk "${enc_iv}" | od -A n -t x1 | tr -d ' |\n')"
 	fi
 	pieces_data="$(printf "%s" "${ts_data_sec}" | sed '/^#/d')"
 	if printf '%s' "${pieces_data}" | grep -q 'http'; then
@@ -238,7 +237,7 @@ hist_handler(){
 			hist_count_or="$(grep -c '[^[:space:]]' ~/"${hist_file}")"
 			main_interface
 			case "${hist_picked}" in
-				cont|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate)
+				cont|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate|[Nn]|[Pp]|[Bb]|[Uu][Pp])
 					[ "${hist_picked}" = "cont" ] && [ "${hist_count_persi}" = "1" ] && : "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					hist_data="$(sed -E '1!G;h;$!d' ~/"${hist_file}" | sed -E "$((page_comp + 1)),$((page_comp + hist_limt))"'!d')"
 					;;
@@ -267,7 +266,7 @@ hist_handler(){
 					else
 						break
 					fi
-				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate'; then
+				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate|[Nn]|[Pp]|[Bb]|[Uu][Pp]'; then
 					break
 				else
 					err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
@@ -303,17 +302,9 @@ hist_handler(){
 						: "$((page_comp -= hist_limt))" "$((cur_page_hist -= 1))"
 					fi
 					;;
-				[Uu]pdate|[Uu][Pp])
-					hist_update
-					sleep 1
-					;;
-				0*)
-					save_terminal
-					exit 0
-					;;
-				*)
-					break
-					;;
+				[Uu]pdate|[Uu][Pp])	hist_update ; sleep 1 ;;
+				0*)	save_terminal && exit 0	;;
+				*)	break	;;
 			esac
 		done
 		# Assign the Infos by declaring
@@ -372,24 +363,16 @@ idx_comp(){
 debug_handler(){
 	case "${1}" in
 		# Searchers
-		total-quer)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Total API search response: ${2}"
-			;;
-		total-eps)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Total Episodes: ${2}"
-			;;
-		speci-eps)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Special Episodes: ${2}"
-			;;
+		total-quer)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Total API search response: ${2}"	;;
+		total-eps)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Total Episodes: ${2}"	;;
+		speci-eps)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72msearch\033[38;5;226m] \033[0m%s\n' "Special Episodes: ${2}"	;;
 		# Misc
 		took-dur)
 			took_dur="$(($(awk 'BEGIN {srand(); print srand()}') - took_dur))"
 			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mmisc\033[38;5;226m] \033[0m%s\n' "Took $(printf '%02dm:%02ds' "$((took_dur / 60 % 60))" "$((took_dur % 60))")"
 			unset took_dur
 			;;
-		serv-current)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mmisc\033[38;5;226m] \033[0m%s\n' "Current Server: ${2}"
-			;;
+		serv-current)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mmisc\033[38;5;226m] \033[0m%s\n' "Current Server: ${2}"	;;
 		show-inf)
 			shift 1
 			while IFS= read -r line; do
@@ -399,19 +382,11 @@ debug_handler(){
 			EOF
 			;;
 		# Scrapers
-		ani-id)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n' "Anime ID: ${2}"
-			;;
-		ani-url)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n' "Anime Index URL: ${2}"
-			;;
-		vid-url)
-			printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n\n' "Direct Stream URL: ${2}"
-			;;
+		ani-id)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n' "Anime ID: ${2}"	;;
+		ani-url)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n' "Anime Index URL: ${2}"	;;
+		vid-url)	printf '\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mscraper\033[38;5;226m] \033[0m%s\n\n' "Direct Stream URL: ${2}"	;;
 		# History
-		ani-updated)
-			printf '\033[2K\r\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mhist\033[38;5;226m] \033[0m%b\n' "\"${2}\" has ${3} new episode, Latest EP is: ${4}"
-			;;
+		ani-updated)	printf '\033[2K\r\033[38;5;226m[\033[0m\033[38;5;8mDebugger\033[38;5;66m@\033[38;5;72mhist\033[38;5;226m] \033[0m%b\n' "\"${2}\" has ${3} new episode, Latest EP is: ${4}"	;;
 	esac
 }
 
@@ -560,9 +535,7 @@ choose_from_menu(){
 				: "$(( cur += 1 ))"
 				[ "${cur}" -ge "${count}" ] && cur="$(( count - 1 ))"
 				;;
-			"${escchar}"|[Qq])
-				die 0
-				;;
+			"${escchar}"|[Qq])	die 0	;;
 			[Hh])
 				sanitize_terminal "$((count + 1))" "$((count + 1))" "$((count + 1))"
 				while IFS= read -r lines; do
@@ -583,17 +556,9 @@ choose_from_menu(){
 				sanitize_terminal 9 10
 				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
 				;;
-			"${pgup}")
-				cur="0"
-				;;
-			"${pgdn}")
-				cur="$((count - 1))"
-				;;
-			"")
-				menu_result_menu="${cur}"
-				save_terminal
-				break
-				;;
+			"${pgup}")	cur="0"	;;
+			"${pgdn}")	cur="$((count - 1))"	;;
+			"")	menu_result_menu="${cur}" && save_terminal && break	;;
 		esac
 		printf '%b\r' "\033[${count}A"
 	done
@@ -636,10 +601,8 @@ ffmpeg_prog(){
 
 progbar(){
 	prog="$(( ${1} * 100 / ${2} * 100 / 100 ))"
-	done="$(( (prog * 4) / 10 ))"
-	left="$(( 40 - done ))"
-	fill="$(printf "\033[7m\033[38;5;$(( (done % 103 / 20) + 101 ))m%${done}s\033[0m")"
-	empty="$(printf "%${left}s")"
+	done="$(( (prog * 4) / 10 ))" left="$(( 40 - done ))"
+	fill="$(printf "\033[7m\033[38;5;$(( (done % 103 / 20) + 101 ))m%${done}s\033[0m")" empty="$(printf "%${left}s")"
 	printf '\033[2K\r%s — %s : %s' "¦${fill}${empty}¦" "${prog}%" "${3}"
 	unset prog "done" left fill empty
 }
@@ -754,21 +717,15 @@ id_grepper(){
 			[ "${idena}" = "yes" ] || die 1 "No ID Returned, Default server is only available at this time"
 			[ "${server}" != "gogo" ] && ind_gogoend="$(curl -m 5 -sLk "${base_url_go}/streaming.php" -d "id=${idserv}")"
 			;;
-		default)
-			[ "${dry_run}" = "true" ] && ind_gogoend="$(curl -m 5 -sLk "${base_url_go}/streaming.php" -d "id=${idserv}")"
-			;;
+		default)	[ "${dry_run}" = "true" ] && ind_gogoend="$(curl -m 5 -sLk "${base_url_go}/streaming.php" -d "id=${idserv}")"	;;
 	esac
 }
 
 streaming_url_server(){
 	if [ "${download_mode}" != "true" ]; then
 		case "${server:=default}" in
-			sb|dood|mpup)
-					[ "${player}" = "built-in" ] && die 1 "Built-in player is not supported in this Server"
-				;;
-			ok)
-					[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"
-				;;
+			sb|dood|mpup)	[ "${player}" = "built-in" ] && die 1 "Built-in player is not supported in this Server"	;;
+			ok)	[ "${player}" = "built-in" ] && player="mpv" && dep_check "mpv"	;;
 		esac
 	fi
 	case "${server:=default}" in
@@ -839,16 +796,13 @@ streaming_url_server(){
 			cust_referer="${main_streaming}"
 			;;
 	esac
-	if [ "${dry_run}" != "true" ]; then
-		[ -z "${main_streaming}" ] && die 1 "Failed to retrieve streams from server"
-	fi
+	[ "${dry_run}" != "true" ] && [ -z "${main_streaming}" ] && die 1 "Failed to retrieve streams from server"
 }
 
 quality_selector(){
 	case ${qual_stream:-high} in
 		[Nn]ormal|[Nn]|720)	qualvidman="720" qualvid="2"	;;
-		[Ww]orst|[Ll]ow|[Ll]|360)
-			[ "${server}" = "fembed" ] && qualvidman="480" || qualvidman="360"
+		[Ww]orst|[Ll]ow|[Ll]|360)	[ "${server}" = "fembed" ] && qualvidman="480" || qualvidman="360"
 			qualvid="last"
 			;;
 		[Bb]est|[Hh]igh|[Hh]|1080|*)	qualvidman="1080" qualvid="1"	;;
@@ -867,15 +821,11 @@ launch_vid(){
 			nohup vlc.exe "${main_streaming}" --http-user-agent="${user_agent}" --http-referrer="${cust_referer}" --meta-title="${title_crafted}" > /dev/null 2>&1 &
 			;;
 		iina)
-			if printf '%s' "${main_streaming}" | grep -qE 'manifest|m3u8|master.m3u8'; then
-				idx_comp "${main_streaming}"
-			fi
+			printf '%s' "${main_streaming}" | grep -qE 'manifest|m3u8|master.m3u8' && idx_comp "${main_streaming}"
 			nohup iina "${main_streaming}" --keep-running --mpv-referrer="${cust_referer}" --mpv-vid="${qualvid:-auto}" --no-stdin --mpv-media-title="${title_crafted}" --mpv-user-agent="${user_agent}" --mpv-tls-verify="no" > /dev/null 2>&1 &
 			;;
 		mpv|*)
-			if printf '%s' "${main_streaming}" | grep -qE 'manifest|m3u8|master.m3u8'; then
-				idx_comp "${main_streaming}"
-			fi
+			printf '%s' "${main_streaming}" | grep -qE 'manifest|m3u8|master.m3u8' && idx_comp "${main_streaming}"
 			nohup mpv "${main_streaming}" --save-position-on-quit --media-title="${title_crafted}" --referrer="${cust_referer}" --vid="${qualvid:-auto}" --user-agent="${user_agent}" --tls-verify="no" > /dev/null 2>&1 &
 			;;
 	esac
@@ -890,20 +840,13 @@ loop(){
 		launch_vid
 		main_interface
 		hist_handler append "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
-		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-20))}/ s_(.{$((termcols-29))}).*(.{7}\$)_\\1...\\2_g")"
+		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-18))}/ s_(.{$((termcols-31))}).*(.{7}\$)_\\1...\\2_g")"
 		formatter_title="$(printf '%b' "Now Playing: \033[4m\033[48;5;240m${trunc_aniname}\033[0m [${epi_selected}/${epi_total}]")"
 		printf "%*s\n\n" "$(((${#formatter_title}+termcols+18)/2))" "${formatter_title}"
-		if [ "${debug_mode}" = "true" ]; then
-			debug_handler took-dur "${took_dur}"
-			debug_handler serv-current "${server}"
-			debug_handler ani-id "${idserv}"
-			debug_handler ani-url "${anime_selected}"
-			debug_handler vid-url "${main_streaming}"
-		fi
+		[ "${debug_mode}" = "true" ] && debug_handler took-dur "${took_dur}" && debug_handler serv-current "${server}" && debug_handler ani-id "${idserv}" && debug_handler ani-url "${anime_selected}" && debug_handler vid-url "${main_streaming}"
 		[ "${is_half}" != "true" ] && [ "${end_ep:-${epi_selected}}" -gt "${epi_total}" ] && die 1 "Out of Range"
 		if [ "${epi_selected%%.[0-9]*}" -lt "${end_ep:-${epi_selected%%.[0-9]*}}" ]; then
-			: "$((epi_selected += 1))"
-			continue
+			: "$((epi_selected += 1))" && continue
 		else
 			unset end_ep
 		fi
@@ -918,23 +861,15 @@ loop(){
 		Download Episode"
 		[ -z "${menu_result_menu}" ] && die 1 "Unknown Error Appeared"
 		case "${menu_result_menu}" in
-			0)
-				die 0
-				;;
-			1)
-				continue
-				;;
+			0)	die 0	;;
+			1)	continue	;;
 			2)
-				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
-					epi_selected="${epi_selected%%.[0-9]*}"
-				fi
+				printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%.[0-9]*}"
 				: "$((epi_selected += 1))"
 				unset main_streaming encodeb64 idserv
 				;;
 			3)
-				if printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*'; then
-					epi_selected="${epi_selected%%.[0-9]*}"
-				fi
+				printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%.[0-9]*}"
 				: "$((epi_selected -= 1))"
 				unset main_streaming encodeb64 idserv
 				;;
@@ -1077,34 +1012,15 @@ main_exec(){
 arg_parser(){
 	while getopts ":vhduHDtq:-:p:s:" opt; do
 		case "${opt}" in
-			v)
-				printf '%s\n' "Version: ${VERSION}"
-				exit 0
-				;;
-			h)
-				show_help
-				exit 0
-				;;
-			d)
-				download_mode="true"
-				;;
-			u)
-				update_script
-				;;
-			H)
-				hist_handler && hist_open="true"
-				;;
-			D)
-				[ -e ~/"${hist_file}" ] || die 1 "Can't clear the file, File does not exist."
-				: > ~/"${hist_file}"
-				exit 0
-				;;
-			t)
-				dry_run="true"
-				;;
-			q)
-				qual_stream="${OPTARG}"
-				;;
+			v)	printf '%s\n' "Version: ${VERSION}" && exit 0	;;
+			h)	show_help && exit 0	;;
+			d)	download_mode="true"	;;
+			u)	update_script	;;
+			H)	hist_handler && hist_open="true"	;;
+			D)	[ -e ~/"${hist_file}" ] || die 1 "Can't clear the file, File does not exist."
+				: > ~/"${hist_file}" && exit 0	;;
+			t)	dry_run="true"	;;
+			q)	qual_stream="${OPTARG}"	;;
 			-)
 				case "${OPTARG}" in
 					dub)	dub_mode="true"	;;
