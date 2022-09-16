@@ -266,7 +266,7 @@ hist_handler(){
 					else
 						break
 					fi
-				elif printf '%s' "${hist_picked}" | grep -qE '^0.*|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate|[Nn]|[Pp]|[Bb]|[Uu][Pp]'; then
+				elif printf '%s' "${hist_picked}" | grep -qE '^(0.*|[Nn]ext|[Pp]rev|[Bb]ack|[Uu]pdate|[Nn]|[Pp]|[Bb]|[Uu][Pp])$'; then
 					break
 				else
 					err "Invalid Input... Pick between 1-${hist_count_persi}, or type 0 to exit."
@@ -552,8 +552,7 @@ choose_from_menu(){
 				Press ENTER to Continue...
 				EOF
 				read -r at && : "${at}" && unset at
-				# Sanitize Terminal
-				sanitize_terminal 9 10
+				sanitize_terminal 9 10	# Sanitize Terminal
 				[ "${count}" -ge "8" ] && printf '%b' "\033[$((8-count))A" || printf '%b' "\033[$((9-count))A"
 				;;
 			"${pgup}")	cur="0"	;;
@@ -569,10 +568,7 @@ ffmpeg_prog(){
 	vid_dur="$(printf '%s' "${inf_meta}" | sed -n "s/.* Duration: \([^,]*\), start: .*/\1/p")"
 	vid_fps="$(printf '%s' "${inf_meta}" | sed -nE '/fps/ {s_.*, (.*) fps.*_\1_p;q}')"
 	[ -n "${vid_dur}" ] && [ -z "${vid_fps}" ] && vid_fps="$(printf '%s' "${inf_meta}" | sed -nE '/tbr/ {s_.*, (.*) tbr.*_\1_p;q}')"
-	if [ -z "${vid_dur}" ] || [ -z "${vid_fps}" ]; then
-		err "An Error Occured"
-		return 1
-	fi
+	{ [ -z "${vid_dur}" ] || [ -z "${vid_fps}" ] ;} && { err "An Error Occured" ; return 1 ;}
 	hrs="${vid_dur%%:*}"
 	mins="$(printf '%s' "${vid_dur}" | cut -d':' -f2)"
 	secs="${vid_dur##*:}" secs="${secs%%.*}" secs="${secs##0}"
@@ -642,16 +638,14 @@ selector(){
 		read -r ani_selected
 		ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	done
-	if printf '%s' "${ani_selected}" | grep -q '^0'; then save_terminal && exit 0; fi
+	printf '%s' "${ani_selected}" | grep -q '^0' && save_terminal && exit 0
 	anime_selected="$(printf '%s' "${query_result}" | sed -E -e "${ani_selected}"'!d' -e "s@(.*)#.*@${base_url}\1@")"
 }
 
 epi_counter(){
 	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div.*epslistplace.*[^\>]*>/,/<\/div>/!d;s_"ep0"_"-1"_g')"
 	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-	if [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; then
-		die 1 "Anime is Not released yet, Or your IP is Blocked"
-	fi
+	{ [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; } && die 1 "Anime is Not released yet, Or your IP is Blocked"
 	if [ "${debug_mode}" = "true" ]; then
 		aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 		debug_handler total-eps "${epi_total}"
@@ -731,14 +725,14 @@ streaming_url_server(){
 	case "${server:=default}" in
 		gogo)
 			cust_referer="gogoanime.la"
-			main_streaming="$(curl -m 5 -sLk "${base_url_ani}/player/v1.php?id=${1}" | sed -nE '/file:/ {s_.*file:."([^"]*)".*_\1_p;q}')"
+			main_streaming="$(curl -m 5 -sLk "${base_url_ani}/stream/gogo.php?id=${1}" | sed -nE '/file:/ {N;s_.*"([^"]*)",.*_\1_g;/[^[:space:]]/p}')"
 			;;
 		sb)
 			cust_referer="sbplay2.com"
 			sb_id="$(printf '%s' "${ind_gogoend}" | sed -E '/StreamSB/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/(.*)_\1_' | tr -d '\n' | od -A n -t x1 | tr -d " |\n")"
-			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362/616e696d646c616e696d646c7c7c363136653639366436343663363136653639366436343663376337633631366536393664363436633631366536393664363436633763376336313665363936643634366336313665363936643634366337633763373337343732363536313664373336327c7c616e696d646c616e696d646c7c7c73747265616d7362"
-			for try_sources in sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
-				main_streaming="$(curl -m 5 -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: streamsb" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
+		sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362"
+			for try_sources in sources48 sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
+				main_streaming="$(curl -m 5 -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: sbstream" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
 				printf '%s' "${main_streaming}" | grep -q "client=" && break
 			done
 			;;
