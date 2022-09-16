@@ -730,7 +730,7 @@ streaming_url_server(){
 		sb)
 			cust_referer="sbplay2.com"
 			sb_id="$(printf '%s' "${ind_gogoend}" | sed -E '/StreamSB/!d;s_.*data-video="(.*?)".*_\1_;s_.*/e/(.*)_\1_' | tr -d '\n' | od -A n -t x1 | tr -d " |\n")"
-		sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362"
+			sbdata="616e696d646c616e696d646c7c7c${sb_id}7c7c616e696d646c616e696d646c7c7c73747265616d7362"
 			for try_sources in sources48 sources43 sources40 sources41 sourcesx42 sourcesx38 sources36 sources37; do
 				main_streaming="$(curl -m 5 -sLk "https://sbplay2.com/${try_sources}/${sbdata}" -H "watchsb: sbstream" -e "${cust_referer}" -A "${user_agent}" | sed -nE 's_.*file":"([^\"]*)",.*_\1_p')"
 				printf '%s' "${main_streaming}" | grep -q "client=" && break
