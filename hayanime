@@ -181,9 +181,7 @@ ffmpegdler(){
 	[ -z "${selc_qual}" ] && inf "Quality Not Found, Switching to High" && selc_qual="$(printf '%s' "${ts_data_fir}" | sed -nE "/x$(printf '%s' "${quallist_vid_ind}" | head -n 1)/{n;p;q}")"
 	[ -d ~/"${ffmp_temp}" ] || mkdir -p ~/"${ffmp_temp}"
 	# Get Relative Path, when it is not fully sourced into stream url
-	if ! printf '%s' "${selc_qual}" | grep -q 'http'; then
-		relpath="${1%/*}/"
-	fi
+	printf '%s' "${selc_qual}" | grep -q 'http' || relpath="${1%/*}/"
 	aud_perf="$(printf '%s' "${ts_data_fir}" | sed -nE 's_^#EXT-X-MEDIA:TYPE=AUDIO.*audio-0.*URI="([^\"]*)".*_\1_p')"
 	# 2nd step get the 2nd layer which is the TS files
 	ts_data_sec="$(curl -sLfk "${relpath}${selc_qual}")" || return 1
@@ -200,9 +198,7 @@ ffmpegdler(){
 		relpath="${1%/*}/"
 	fi
 	total_pieces="$(printf '%s\n' "${pieces_data}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
-	awk -v "r=${relpath}" '{printf("%s%s\n  %s%04d%s\n", r, $1, "out=", NR, ".ts")}' > ~/"${ffmp_purl}" <<-END
-	${pieces_data}
-	END
+	printf '%s' "${pieces_data}" | awk -v "r=${relpath}" '{printf("%s%s\n  %s%04d%s\n", r, $1, "out=", NR, ".ts")}' > ~/"${ffmp_purl}"
 	aria2c -x 16 -s 16 -j 16 -i ~/"${ffmp_purl}" -d ~/"${ffmp_temp}" --console-log-level="error" --check-certificate="false" --download-result="hide" --summary-interval="0"
 	if [ -n "${enc_key}" ]; then
 		for i in ~/"${ffmp_temp}"/*; do
@@ -252,7 +248,7 @@ hist_handler(){
 				: "$((hist_count -= hist_limt))" "$((pages_total += 1))"
 			done
 			[ "${hist_count_persi}" = "0" ] && die 1 "History File is Empty, Watch anime first"
-			table_ui_hist "${hist_data}"
+			table_ui "hist" "${hist_data}"
 			input_questions ">> "
 			read -r hist_picked
 			while true; do
@@ -471,29 +467,14 @@ More info: <https://github.com/TheGlockMisc/hayanime/>."
 }
 
 table_ui(){
-	printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sReleased%1s\033[0m\n"
+	[ "${1}" = "hist" ] && { printf '\n%*s\n' "$((termcols - 5))" "Page ${cur_page_hist:=1} of ${pages_total:-1}" ; printf "\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n" ;} || printf "\n\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sReleased%1s\033[0m\n"
 	while IFS= read -r line; do
 		: "$((coldep += 1))"
 		len="$((termcols - ${#line}))"
 		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
 		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
-	$(printf '%s' "${1}" | sed -E 's_.*#(.*)_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s"  €" | column -s "€" -t | sed '$d')
-	EOF
-	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
-	unset line len coldep
-}
-
-table_ui_hist(){
-	printf '\n%*s\n' "$((termcols - 5))" "Page ${cur_page_hist:=1} of ${pages_total:-1}"
-	printf "\033[48;5;59m%3s#%3s\033[0m\033[48;5;238m%2sAnime Name%$((termcols - 30))s\033[0m\033[48;5;59m%2sEpisode%2s\033[0m\n"
-	while IFS= read -r line; do
-		: "$((coldep += 1))"
-		len="$((termcols - ${#line}))"
-		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
-		[ "${coldep}" = "2" ] && unset coldep
-	done <<-EOF
-	$(printf '%s' "${1}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
+	$(printf '%s' "${2}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
 	unset line len coldep
@@ -513,9 +494,7 @@ choose_from_menu(){
 		IFS='
 		'
 		unset func_off
-		if [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ]; then
-			[ "${server}" != "fembed" ] && [ "${cur}" = "6" ] && func_off="yes"
-		fi
+		{ [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ] ;} && [ "${server}" != "fembed" ] && [ "${cur}" = "6" ] && func_off="yes"
 		for o in ${options}; do
 			if [ "${index}" = "${cur}" ]; then
 					[ "${func_off}" = "yes" ] && printf '%b\n' "  \033[0;32mᐅ\033[0m  \033[48;5;1m${o}\033[0m" || printf '%b\n' "  \033[0;32mᐅ\033[0m  \033[7m${o}\033[0m"
@@ -606,10 +585,7 @@ progbar(){
 
 # Parsers and Searching
 search(){
-	if [ -z "${ani_searched}" ]; then
-		input_questions 'Search Anime Here: '
-		read -r ani_searched
-	fi
+	[ -z "${ani_searched}" ] && { input_questions 'Search Anime Here: ' ; read -r ani_searched ;}
 	ani_searched="$(printf '%s' "${ani_searched}" | tr -d '[:punct:]')"
 }
 
@@ -621,7 +597,7 @@ result_searched(){
 	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
 	[ "${query_count}" = "0" ] && die 1 "No Results was Found"
-	table_ui "${query_scraped}"
+	table_ui "normal" "${query_scraped}"
 	[ "${debug_mode}" = "true" ] && debug_handler took-dur "${took_dur}" && debug_handler total-quer "${query_count}"
 }
 
@@ -645,7 +621,7 @@ selector(){
 epi_counter(){
 	epilist_index="$(curl -sLk "${1}" -A "${user_agent}" | sed -E '/<div.*epslistplace.*[^\>]*>/,/<\/div>/!d;s_"ep0"_"-1"_g')"
 	epi_total="$(printf '%s' "${epilist_index}" | sed -nE 's_.*eptotal":([^\,\}]*)(,.*|\}</.*)_\1_p')"
-	{ [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ]; } && die 1 "Anime is Not released yet, Or your IP is Blocked"
+	{ [ -z "${epi_total}" ] || [ "${epi_total}" = "0" ] ;} && die 1 "Anime is Not released yet, Or your IP is Blocked"
 	if [ "${debug_mode}" = "true" ]; then
 		aniinf="$(printf '%s' "${epilist_index}" | sed -nE 's_.*span.*genredata">([^\<]*)</span>.+br>_Genre : \1_p; s_.*span.*status">([^\<]*)<.*_\1_p')"
 		debug_handler total-eps "${epi_total}"
