@@ -104,17 +104,12 @@ input_questions(){
 update_script(){
 	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die 1 "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
-	if [ -z "${script_ind}" ]; then
-		suc "Cool, Script is up to date!"
+	[ -z "${script_ind}" ] && { suc "Cool, Script is up to date!" ; die 0 ;}
+	if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
+		suc "\007Script has been sucessfully Updated, Enjoy!"
 		die 0
 	else
-		if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
-			printf '%b' "\007"
-			suc "Script has been sucessfully Updated, Enjoy!"
-			die 0
-		else
-			die 1 "Can't update, An Exception Occured. Or it might be can't write the update to file (Make sure you run it as an Administrator/Sudo user)"
-		fi
+		die 1 "Can't update, An Exception Occured. Or it might be can't write the update to file (Make sure you run it as an Administrator/Sudo user)"
 	fi
 }
 
@@ -594,7 +589,7 @@ result_searched(){
 	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&d=gogoanime.gg" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep -E '(-|\()[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -Ev '(-|\()[Dd]ub')"
-	query_scraped="$(printf '%s' "${query_result}" | sed -E 's_.*#(.*)_\1_g')"
+	query_scraped="$(printf '%s' "${query_result}" | cut -d '#' -f2)"
 	query_count="$(printf '%s' "${query_scraped}" | awk 'BEGIN{c=0} //{c++} END{print c}')"
 	[ "${query_count}" = "0" ] && die 1 "No Results was Found"
 	table_ui "normal" "${query_scraped}"
@@ -602,11 +597,7 @@ result_searched(){
 }
 
 selector(){
-	if [ -z "${ani_selected}" ]; then
-		result_searched "${ani_searched}"
-		input_questions 'Pick Here By Number: '
-		read -r ani_selected
-	fi
+	[ -z "${ani_selected}" ] && { result_searched "${ani_searched}" ; input_questions "Pick Here By Number: " ; read -r ani_selected ;}
 	ani_selected="$(printf '%s' "${ani_selected}" | tr -dc '0-9')"
 	while [ "${ani_selected:-$((query_count + 2))}" -gt "${query_count}" ]; do
 		err "Out of Bounds... Pick between 1-${query_count}, or type 0 to exit."
@@ -921,18 +912,9 @@ dryrun_handler(){
 	main_interface
 	[ "${debug_mode}" = "true" ] && debug_handler ani-url "${anime_selected}" && debug_handler ani-id "${idserv}"
 	inf "\nM3u8 Servers"
-	if [ -z "${idena}" ]; then
-		streaming_url_server "${idserv}"
-		if [ -n "${main_streaming}" ]; then
-			suc "Server (${server}) Available"
-			[ "${debug_mode}" = "true" ] && debug_handler vid-url "${main_streaming}"
-		else
-			err "Server (${server}) Failed"
-		fi
-		die 0
-	fi
 	unset server player
-	for server in default gogo sb; do
+	for server in default gogo sb mp4_var fembed dood mpup; do
+		[ "${server}" = "mp4_var" ] && { inf "MP4 Servers" ; continue ;}
 		streaming_url_server "${idserv}"
 		if [ -n "${main_streaming}" ]; then
 			suc "Server (${server}) Available"
@@ -940,16 +922,7 @@ dryrun_handler(){
 		else
 			err "Server (${server}) Failed"
 		fi
-	done
-	inf "MP4 Servers"
-	for server in fembed dood mpup; do
-		streaming_url_server "${idserv}"
-		if [ -n "${main_streaming}" ]; then
-			suc "Server (${server}) Available"
-			[ "${debug_mode}" = "true" ] && debug_handler vid-url "${main_streaming}"
-		else
-			err "Server (${server}) Failed"
-		fi
+		[ -z "${idena}" ] && break
 	done
 	die 0
 }
