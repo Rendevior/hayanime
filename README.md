@@ -5,7 +5,7 @@
 Yet Another Simple but Powerful Anime **Streamer/Downloader**
 
 
-[![Main](https://img.shields.io/badge/Maintainer-TheGlockMisc-green?style=flat-square)](https://github.com/TheGlockMisc)
+[![Main](https://img.shields.io/badge/Maintainer-Rendevior-green?style=flat-square)](https://github.com/Rendevior)
 [![Main](https://img.shields.io/badge/Maintainer-fearocanity-green?style=flat-square)](https://github.com/fearocanity)
 ![Main](https://img.shields.io/badge/OS-Linux-blue?style=flat-square)
 ![Main](https://img.shields.io/badge/OS-Windows-blue?style=flat-square)
@@ -146,13 +146,16 @@ Vibration/Notification Signal, you can identify it when:
 + Supported Special Episodes and Range
 `Ex. 6.5` | `Ex. 1-5`
 
-+ History Sub-Commands<br>
-`next` — to go to the next page<br>
-`prev` | `back` — to go to the previous page<br>
-`update` — update entries<br>
-`[n]n` — pick and proceed to next episode<br>
-`[n]p` — pick and proceed to previous episode<br>
-`[n]d` — delete a specific entry from history
++ History Sub-Commands
+
+| Command | What does it do? |
+| -------- | --------- |
+| `next` \| `n` | Go to the next page |
+| `prev` \| `p` \| `back` | Go to the previous page |
+| `update` \| `up` | Update entries |
+| `[n]n` | Pick and proceed to next episode |
+| `[n]p` | Pick and proceed to previous episode |
+| `[n]d` | Delete a specific entry from history |
 
 + Keybindings on Picker<br>
    - <kbd>Q</kbd> or <kbd>ESC</kbd>		— Exit
