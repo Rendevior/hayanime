@@ -106,7 +106,10 @@ update_script(){
 dep_check(){
 	for deppack; do
 		if ! command -v "${deppack}" >/dev/null ; then
-			[ "${deppack}" = "xdg-open" ] && err "Built-in player is only for Android Users" || err "Program \"${deppack}\" is not installed."
+			case "${deppack}" in
+				xdg-open)	err "Built-in player is only for Android Users"	;;
+				*)	err "Program \"${deppack}\" is not installed."	;;
+			esac
 			is_err="1"
 		fi
 	done
