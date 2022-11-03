@@ -324,6 +324,14 @@ idx_comp(){
 	[ -z "${qualvid}" ] && err "Can't get the Quality, switching to auto" && qualvid="auto"
 }
 
+est_rel_time(){
+	malid="$(curl -sLk "${1}" -A "${user_agent}" | sed -nE 's_.*var malid.=.\x27([^\x27]*)\x27\;.*_\1_p')"
+	epoch_active="$(curl -sLk "${base_url}/assets/s/schedule.json" | sed -nE 's_.*malid":"'"${malid}"'","time":"([^\"]*)".*_\1_p')"
+	[ -z "${epoch_active}" ] && return 1
+	epoch_now="$(($(awk 'BEGIN {srand(); print srand()}') - epoch_active))"
+	printf '%02dd:%02dh:%02dm:%02ds' "$((epoch_now / 24 / 60 / 60 % 60))" "$((epoch_now / 60 / 60 % 60))" "$((epoch_now / 60 % 60))" "$((epoch_now % 60))"
+}
+
 
 # Debuggers and Testing
 debug_handler(){
@@ -440,7 +448,7 @@ table_ui(){
 		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
 		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
-	$(printf '%s' "${2}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
+	$(printf '%s' "${2}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-11))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
 	unset line len coldep
@@ -557,7 +565,7 @@ search(){
 
 result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
-	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&d=gogoanime.gg" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
+	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&root=animixplay.to&d=gogoanime.tel" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep -E '(-|\()[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -Ev '(-|\()[Dd]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | cut -d '#' -f2)"
@@ -724,7 +732,7 @@ streaming_url_server(){
 			[ "${idena}" = "yes" ] || die 1 "No ID Returned, Default server is only available at this time"
 			encodeb64="$(printf '%s' "${1}" | base64)"
 			col_craft_st1="$(printf '%s%s%s' "${1}" "LTXs3GrU8we9O" "${encodeb64}" | base64)"
-			main_streaming="$(curl -m 5 -sk -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
+			main_streaming="$(curl -m 5 -sk -w "%{redirect_url}" "${base_url}/api/cW9${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			;;
 	esac
@@ -768,8 +776,7 @@ launch_vid(){
 loop(){
 	main_interface
 	while [ -e "/proc/${OWNPID}" ]; do
-		main
-		launch_vid
+		[ "${isdont_launch}" = "1" ] || { main ; launch_vid ; unset isdont_launch ;}
 		main_interface
 		hist_handler append "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
 		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-18))}/ s_(.{$((termcols-31))}).*(.{7}\$)_\\1...\\2_g")"
@@ -792,6 +799,7 @@ loop(){
 			2)
 				printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%.[0-9]*}"
 				: "$((epi_selected += 1))"
+				[ "${epi_selected}" -gt "${epi_total}" ] && { err "\nCannot be proceed!! \033[38;5;3mnext episodes estimated release: $(est_rel_time "${anime_selected}" || printf '%s' "(The series is completed)")" ; sleep 3 ; isdont_launch="1" ; : "$((epi_selected -= 1))" ;}
 				unset main_streaming encodeb64 idserv
 				;;
 			3)
@@ -835,12 +843,7 @@ loop(){
 					5)	server="gogo"	;;
 				esac
 				download_mode="true"
-				if [ "${curserv}" = "true" ]; then
-					die 0
-				else
-					unset menu_result_menu qual_stream main_streaming encodeb64 idserv
-					range_dl_handler
-				fi
+				{ [ "${curserv}" = "true" ] && die 0 ;} || { unset menu_result_menu qual_stream main_streaming encodeb64 idserv ; range_dl_handler ;}
 				;;
 		esac
 		unset menu_result_menu
