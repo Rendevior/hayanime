@@ -3,18 +3,18 @@
 # hayanime
 # Easy and Lightweight Program that lets you watch anime without interruptions.
 #
-# Author: TheGlockMisc
+# Author: Rendevior
 # Date: November 23, 2021
 # License: GPL-3.0
 #
-# Github: https://github.com/TheGlockMisc/hayanime
+# Github: https://github.com/Rendevior/hayanime
 #
 # DISCLAIMER
 # I don't own or manage any server on the internet that scrapes by this tool,
 # and i'm not reponsible of any illegal uses of this tool.
 # This tool is for educational purposes only. Use at your own Risk.
 
-VERSION="v2.4.6"
+VERSION="v2.4.7"
 
 # Variables (Default Options)
 OWNPID="${$}"
@@ -81,28 +81,18 @@ err(){
 	return 1
 }
 
-die(){
-	err "${2}"
-	save_terminal
-	exit "${1}"
-}
-
-inf(){
-	printf "\033[38;5;3m%b\033[0m\n" "${1}"
-}
-
-suc(){
-	printf "\033[38;5;2m%b\033[0m\n" "${1}"
-}
+die(){ err "${2}" ; save_terminal ; exit "${1}" ;}
+inf(){ printf "\033[38;5;3m%b\033[0m\n" "${1}" ;}
+suc(){ printf "\033[38;5;2m%b\033[0m\n" "${1}" ;}
 
 input_questions(){
-	printf '\033[38;5;140m%s\033[38;5;175m%s\033[38;5;140m%s\033[38;5;175m%s\033[38;5;140m%s\n%s\033[0m\033[38;5;147m%s\033[0m%s' " ┌─[" "hayanime${VERSION}@${userguest}" "]─[" "${currtrunc}" "]" " └──╼ " "[+] " "${1}"
+	printf '\033[38;5;140m ┌─[\033[38;5;175mhayanime%s@%s\033[38;5;140m]─[\033[38;5;175m%s\033[38;5;140m]\n └──╼ \033[0m\033[38;5;147m[+] \033[0m%s' "${VERSION}" "${userguest}" "${currtrunc}" "${1}"
 }
 
 
 # Misc and Tools
 update_script(){
-	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/TheGlockMisc/hayanime/master/hayanime")" || die 1 "An error occured while retrieving from github"
+	script_ind="$(curl -sLfk -A "${user_agent}" "https://raw.githubusercontent.com/Rendevior/hayanime/master/hayanime")" || die 1 "An error occured while retrieving from github"
 	script_ind="$(printf '%s\n' "${script_ind}" | diff -u "${0}" -)"
 	[ -z "${script_ind}" ] && { suc "Cool, Script is up to date!" ; die 0 ;}
 	if printf '%s\n' "${script_ind}" | patch -s "${0}" - ; then
@@ -116,27 +106,14 @@ update_script(){
 dep_check(){
 	for deppack; do
 		if ! command -v "${deppack}" >/dev/null ; then
-			[ "${deppack}" = "xdg-open" ] || err "Program \"${deppack}\" is not installed."
 			case "${deppack}" in
-				aria2c)
-					inf "To install aria2c, Type <your_package_manager> aria2"
-					;;
-				vlc.exe)
-					inf "Set the absolute path of vlc.exe in your \"\$PATH\" Environment Variable"
-					;;
-				mpv)
-					inf "[Note: For Android Users Only] Please run this to use mpv-android:"
-					suc "curl -sL -o \"\${PREFIX}/bin/mpv\" \"https://raw.githubusercontent.com/TheGlockMisc/mpv-android-argparse/master/mpv\" && chmod +x \"\${PREFIX}/bin/mpv\""
-					inf "For LINUX users:"
-					suc "sudo <your_package_manager> mpv"
-					;;
-				xdg-open)
-					err "Built-in player is only for Android Users"
-					;;
+				xdg-open)	err "Built-in player is only for Android Users"	;;
+				*)	err "Program \"${deppack}\" is not installed."	;;
 			esac
-			exit 1
+			is_err="1"
 		fi
 	done
+	[ "${is_err}" = "1" ] && die 1
 }
 
 dl_manager(){
@@ -153,15 +130,13 @@ dl_manager(){
 			xco="${?}"
 			;;
 		*)
-			dep_check "aria2c"
-			printf '%b' "\n"
+			dep_check "aria2c" ; printf '\n'
 			aria2c -x 5 -s 5 --console-log-level="error" --user-agent="${user_agent}" --referer="${1}" --check-certificate="false" --summary-interval="0" --download-result="hide" --auto-save-interval="0" "${2}" -o "${3}"
 			xco="${?}"
 			;;
 	esac
 	if [ "${xco}" = "0" ]; then
-		printf '%b\n' "\007"
-		suc "Downloading Episode ${epi_selected} Done!!"
+		suc "\007\nDownloading Episode ${epi_selected} Done!!"
 	else
 		err "Downloading Episode ${epi_selected} Failed..."
 	fi
@@ -349,6 +324,14 @@ idx_comp(){
 	[ -z "${qualvid}" ] && err "Can't get the Quality, switching to auto" && qualvid="auto"
 }
 
+est_rel_time(){
+	malid="$(curl -sLk "${1}" -A "${user_agent}" | sed -nE 's_.*var malid.=.\x27([^\x27]*)\x27\;.*_\1_p')"
+	epoch_active="$(curl -sLk "${base_url}/assets/s/schedule.json" | sed -nE 's_.*malid":"'"${malid}"'","time":"([^\"]*)".*_\1_p')"
+	[ -z "${epoch_active}" ] && return 1
+	epoch_now="$(($(awk 'BEGIN {srand(); print srand()}') - epoch_active))"
+	printf '%02dd:%02dh:%02dm:%02ds' "$((epoch_now / 24 / 60 / 60 % 60))" "$((epoch_now / 60 / 60 % 60))" "$((epoch_now / 60 % 60))" "$((epoch_now % 60))"
+}
+
 
 # Debuggers and Testing
 debug_handler(){
@@ -383,31 +366,27 @@ debug_handler(){
 
 
 # UI Setup Design
-ui_banner(){
-	while IFS= read -r line; do
-		rnum="$(($$ % 60))"
-		printf "\033[38;5;${rnum}m%*s\033[0m\n" "$(((${#line}-${#rnum}+termcols)/2))" "${line}"
-	done <<-"EOF"
-	 _   _                         _                
-	| | | | __ _ _   _  __ _ _ __ (_)_ __ ___   ___ 
-	| |_| |/ _` | | | |/ _` | '_ \| | '_ ` _ \ / _ \
-	|  _  | (_| | |_| | (_| | | | | | | | | | |  __/
-	|_| |_|\__,_|\__, |\__,_|_| |_|_|_| |_| |_|\___|
-	             |___/           早にめ。。。
-	EOF
-}
-
 main_interface(){
 	clear
-	ui_banner
+	while IFS= read -r line; do
+		rnum="$(($$ % 60))"
+		printf "\033[1m\033[38;5;${rnum}m%*s\033[0m\n" "$(((${#line}+termcols)/2))" "${line}"
+	done <<-"EOF"
+	    __  __                        _              
+	   / / / /___ ___  ______ _____  (_)___ ___  ___ 
+	  / /_/ / __ `/ / / / __ `/ __ \/ / __ `__ \/ _ \
+	 / __  / /_/ / /_/ / /_/ / / / / / / / / / /  __/
+	/_/ /_/\__,_/\__, /\__,_/_/ /_/_/_/ /_/ /_/\___/ 
+	            /____/                               
+	EOF
 	while IFS= read -r line; do
 		printf "%*s\n" "$(((${#line}+termcols)/2))" "${line}"
 	done <<-EOF
 	
 	Version: ${VERSION}
-	Fast and Reliable program to Watch anime...
+	Lightweight yet Super fast...
+	
 	EOF
-	printf '%b' "\n"
 }
 
 show_help(){
@@ -458,7 +437,7 @@ Servers:
     [4] : Dood Server (mid speed server | mp4)
     [5] : MP4up server (mid fast-ish server | mp4)
 
-More info: <https://github.com/TheGlockMisc/hayanime/>."
+More info: <https://github.com/Rendevior/hayanime/>."
 }
 
 table_ui(){
@@ -469,7 +448,7 @@ table_ui(){
 		[ "${coldep}" = "1" ] && printf "\033[48;5;236m%s%${len}s\033[0m" "${line}" || printf "\033[48;5;235m%s%${len}s\033[0m" "${line}"
 		[ "${coldep}" = "2" ] && unset coldep
 	done <<-EOF
-	$(printf '%s' "${2}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-10))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
+	$(printf '%s' "${2}" | sed -E 's_.*¢(.*)£.*_\1_g' | sed -E "s_(.{$((termcols-26))}).*(.{5})(€.*)_\\1...\\2\\3_g;\$a\\$(printf "%*s" "$((termcols-11))" "€2022")\\" | nl -w4 -s" €" | column -s "€" -t | sed '$d')
 	EOF
 	printf "\033[48;5;59m%7s\033[0m\033[48;5;238m%$((termcols - 18))s\033[0m\033[48;5;59m%11s\033[0m\n\n"
 	unset line len coldep
@@ -586,7 +565,7 @@ search(){
 
 result_searched(){
 	[ "${debug_mode}" = "true" ] && took_dur="$(awk 'BEGIN {srand(); print srand()}')"
-	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&d=gogoanime.gg" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
+	query_result="$(curl -sL "${search_base_api}" -d "q2=${1}&root=animixplay.to&d=gogoanime.tel" | tr -d "\\\\" | grep -oP 'name.*?(Released: [0-9]*|\&nbsp\;)' | sed -E 's_\&nbsp\;_Released: TBA_g;s_.*href="([^\"]*)".*title="([^\"]*)".*Released:.(TBA|[0-9]*).*_\1\#\2 €\3_')"
 	[ -z "${query_result}" ] && die 1 "Anime \"${ani_searched:-<empty>}\" Not found"
 	[ "${dub_mode}" = 'true' ] && query_result="$(printf '%s' "${query_result}" | grep -E '(-|\()[Dd]ub')" || query_result="$(printf '%s' "${query_result}" | grep -Ev '(-|\()[Dd]ub')"
 	query_scraped="$(printf '%s' "${query_result}" | cut -d '#' -f2)"
@@ -753,7 +732,7 @@ streaming_url_server(){
 			[ "${idena}" = "yes" ] || die 1 "No ID Returned, Default server is only available at this time"
 			encodeb64="$(printf '%s' "${1}" | base64)"
 			col_craft_st1="$(printf '%s%s%s' "${1}" "LTXs3GrU8we9O" "${encodeb64}" | base64)"
-			main_streaming="$(curl -m 5 -sk -w "%{redirect_url}" "${base_url}/api/live${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
+			main_streaming="$(curl -m 5 -sk -w "%{redirect_url}" "${base_url}/api/cW9${col_craft_st1}" -A "${user_agent}" | sed -nE 's_.*(https://.*player.html[^\x22\x27<>]*).*_\1_p' | awk -F'#' '{print $2}' | base64 -d)"
 			cust_referer="${main_streaming}"
 			;;
 	esac
@@ -797,8 +776,7 @@ launch_vid(){
 loop(){
 	main_interface
 	while [ -e "/proc/${OWNPID}" ]; do
-		main
-		launch_vid
+		[ "${isdont_launch}" = "1" ] || { main ; launch_vid ; unset isdont_launch ;}
 		main_interface
 		hist_handler append "${anime_selected}" "${anime_name_crafted}" "${epi_selected}/${epi_total}" "${player}"
 		trunc_aniname="$(printf '%s' "${anime_name_crafted}" | sed -E "/.{$((termcols-18))}/ s_(.{$((termcols-31))}).*(.{7}\$)_\\1...\\2_g")"
@@ -812,14 +790,8 @@ loop(){
 			unset end_ep
 		fi
 		inf "Press H to show keybindings..."
-		choose_from_menu "Pick based on your suit needs:" "Exit This Program
-		Relaunch Episode Again
-		Next Episode
-		Back to Previous Episode
-		Select Episode
-		Search For Another Anime
-		Change Quality
-		Download Episode"
+		menu_text="$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' "Exit This Program" "Relaunch Episode Again" "Next Episode" "Back to Previous Episode" "Select Episode" "Search For Another Anime" "Change Quality" "Download Episode")"
+		choose_from_menu "Pick based on your suit needs:" "${menu_text}"
 		[ -z "${menu_result_menu}" ] && die 1 "Unknown Error Appeared"
 		case "${menu_result_menu}" in
 			0)	die 0	;;
@@ -827,6 +799,7 @@ loop(){
 			2)
 				printf '%s' "${epi_selected}" | grep -q '[0-9]*\.[0-9]*' && epi_selected="${epi_selected%%.[0-9]*}"
 				: "$((epi_selected += 1))"
+				[ "${epi_selected}" -gt "${epi_total}" ] && { err "\nCannot be proceed!! \033[38;5;3mnext episodes estimated release: $(est_rel_time "${anime_selected}" || printf '%s' "(The series is completed)")" ; sleep 3 ; isdont_launch="1" ; : "$((epi_selected -= 1))" ;}
 				unset main_streaming encodeb64 idserv
 				;;
 			3)
@@ -849,9 +822,8 @@ loop(){
 				if [ "${player}" = "vlc" ] || [ "${player}" = "built-in" ]; then
 					[ "${server}" = "fembed" ] || die 1 "Switching quality in (VLC & builtin) players is not available"
 				fi
-				choose_from_menu "\nPick and change your quality:" "High (1080p/Auto)
-				Normal (720p)
-				Low (480p)"
+				menu_text="$(printf '%s\n%s\n%s\n' "High (1080p/Auto)" "Normal (720p)" "Low (480p)")"
+				choose_from_menu "\nPick and change your quality:" "${menu_text}"
 				case "${menu_result_menu}" in
 					0)	qual_stream="high"	;;
 					1)	qual_stream="normal"	;;
@@ -860,12 +832,8 @@ loop(){
 				continue
 				;;
 			7)
-				choose_from_menu "\nWhat server do you want to use?:" "Current Server
-				Server 1 (mp4)
-				Server 2 (mp4)
-				Server 3 (mp4)
-				Server 4 (m3u8)
-				Server 5 (m3u8)"
+				menu_text="$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' "Current Server" "Server 1 (mp4)" "Server 2 (mp4)" "Server 3 (mp4)" "Server 4 (m3u8)" "Server 5 (m3u8)")"
+				choose_from_menu "\nWhat server do you want to use?:" "${menu_text}"
 				case "${menu_result_menu}" in
 					0)	curserv="true" && dl_manager "${cust_referer}" "${main_streaming}" "${file_name_crafted}"	;;
 					1)	server="mpup"	;;
@@ -875,12 +843,7 @@ loop(){
 					5)	server="gogo"	;;
 				esac
 				download_mode="true"
-				if [ "${curserv}" = "true" ]; then
-					die 0
-				else
-					unset menu_result_menu qual_stream main_streaming encodeb64 idserv
-					range_dl_handler
-				fi
+				{ [ "${curserv}" = "true" ] && die 0 ;} || { unset menu_result_menu qual_stream main_streaming encodeb64 idserv ; range_dl_handler ;}
 				;;
 		esac
 		unset menu_result_menu
